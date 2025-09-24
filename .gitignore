@@ -1,0 +1,42 @@
+# Xcode
+.DS_Store
+*/.DS_Store
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+
+# Build products
+build/
+DerivedData/
+*.o
+*.LinkFileList
+*.hmap
+
+# User settings
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.pbxuser
+
+# Swift Package Manager
+.swiftpm/
+.build/
+Package.resolved
+
+# CocoaPods
+Pods/
+Podfile.lock
+
+# Carthage
+Carthage/Build/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# Other
+*.moved-aside
+*.xcuserstate
+*.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings

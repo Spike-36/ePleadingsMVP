@@ -2,13 +2,6 @@ import Foundation
 import AppKit
 import UniformTypeIdentifiers
 
-struct CaseFile: Identifiable {
-    let id = UUID()
-    let name: String        // Base name without extension
-    let fileExtension: String
-    let localURL: URL       // Location in app’s sandbox
-}
-
 /// Service to handle importing files into the app’s sandbox (macOS).
 final class ImportService: ObservableObject {
     @Published var importedFiles: [CaseFile] = []
@@ -27,18 +20,39 @@ final class ImportService: ObservableObject {
             if panel.runModal() == .OK, let pickedURL = panel.url {
                 let ext = pickedURL.pathExtension.lowercased()
                 let name = pickedURL.deletingPathExtension().lastPathComponent
+                let safeName = FileHelper.safeName(from: name)
                 
                 do {
-                    // Delegate actual file copy into sandbox to FileHelper
-                    let destination = try FileHelper.saveToSandbox(originalURL: pickedURL)
+                    // Copy file into sandbox
+                    let destination = try FileHelper.copyFile(pickedURL, toCaseFolder: safeName)
                     
-                    // Record it in our model
-                    let newFile = CaseFile(
-                        name: name,
-                        fileExtension: ext,
-                        localURL: destination
-                    )
-                    self.importedFiles.append(newFile)
+                    // See if we already have a CaseFile for this case
+                    if let index = self.importedFiles.firstIndex(where: { $0.caseName == safeName }) {
+                        var existing = self.importedFiles[index]
+                        if ext == "pdf" {
+                            existing = CaseFile(
+                                caseName: safeName,
+                                pdfURL: destination,
+                                docxURL: existing.docxURL
+                            )
+                        } else if ext == "docx" {
+                            existing = CaseFile(
+                                caseName: safeName,
+                                pdfURL: existing.pdfURL,
+                                docxURL: destination
+                            )
+                        }
+                        self.importedFiles[index] = existing
+                    } else {
+                        // Create new CaseFile
+                        let newFile = CaseFile(
+                            caseName: safeName,
+                            pdfURL: ext == "pdf" ? destination : nil,
+                            docxURL: ext == "docx" ? destination : nil
+                        )
+                        self.importedFiles.append(newFile)
+                    }
+                    
                 } catch {
                     print("❌ ImportService failed: \(error)")
                 }

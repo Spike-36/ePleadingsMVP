@@ -43,6 +43,11 @@
 			path = Services;
 			sourceTree = "<group>";
 		};
+		504074C02E83833800E08A27 /* Models */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Models;
+			sourceTree = "<group>";
+		};
 		5086B3442E82DD3400F80D9E /* ePleadingsMVPTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = ePleadingsMVPTests;
@@ -83,6 +88,7 @@
 		5086B32A2E82DD3300F80D9E = {
 			isa = PBXGroup;
 			children = (
+				504074C02E83833800E08A27 /* Models */,
 				504074B92E837EC000E08A27 /* Services */,
 				50A5CFF32E835A3B00BD6624 /* ContentView.swift */,
 				50A5CFF42E835A3B00BD6624 /* ePleadingsMVP.entitlements */,
@@ -120,6 +126,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				504074B92E837EC000E08A27 /* Services */,
+				504074C02E83833800E08A27 /* Models */,
 			);
 			name = ePleadingsMVP;
 			packageProductDependencies = (

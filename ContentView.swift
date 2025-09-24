@@ -4,32 +4,33 @@ struct ContentView: View {
     @StateObject private var importService = ImportService()
     
     var body: some View {
-        VStack(spacing: 20) {
-            Button(action: {
-                importService.importFile()
-            }) {
-                Text("Import File")
-                    .padding()
-            }
-            
-            if importService.importedFiles.isEmpty {
-                Text("No files imported yet")
-                    .foregroundColor(.secondary)
-            } else {
-                List(importService.importedFiles) { file in
+        VStack {
+            List {
+                ForEach(importService.importedFiles) { file in
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("\(file.name).\(file.fileExtension)")
+                        Text(file.caseName)
                             .font(.headline)
-                        Text(file.localURL.path)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        
+                        if file.isPDFMissing {
+                            Text("⚠ Missing PDF")
+                                .foregroundColor(.orange)
+                                .font(.subheadline)
+                        }
+                        if file.isDOCXMissing {
+                            Text("⚠ Missing DOCX")
+                                .foregroundColor(.orange)
+                                .font(.subheadline)
+                        }
                     }
-                    .padding(.vertical, 4)
                 }
             }
+            
+            Button("Import File") {
+                importService.importFile()
+            }
+            .padding()
         }
         .frame(minWidth: 400, minHeight: 300)
-        .padding()
     }
 }
 

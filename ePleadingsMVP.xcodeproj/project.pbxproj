@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		504074CD2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 504074CB2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodeld */; };
 		50A5CFF62E835A3B00BD6624 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50A5CFF32E835A3B00BD6624 /* ContentView.swift */; };
 		50A5CFF72E835A3B00BD6624 /* ePleadingsMVPApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50A5CFF52E835A3B00BD6624 /* ePleadingsMVPApp.swift */; };
 /* End PBXBuildFile section */
@@ -29,6 +30,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		504074CC2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = ePleadingsMVP.xcdatamodel; sourceTree = "<group>"; };
 		5086B3332E82DD3300F80D9E /* ePleadingsMVP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ePleadingsMVP.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5086B3412E82DD3400F80D9E /* ePleadingsMVPTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ePleadingsMVPTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5086B34B2E82DD3400F80D9E /* ePleadingsMVPUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ePleadingsMVPUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -97,6 +99,7 @@
 				504074C02E83833800E08A27 /* Models */,
 				504074B92E837EC000E08A27 /* Services */,
 				50A5CFF32E835A3B00BD6624 /* ContentView.swift */,
+				504074CB2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodeld */,
 				50A5CFF42E835A3B00BD6624 /* ePleadingsMVP.entitlements */,
 				50A5CFF52E835A3B00BD6624 /* ePleadingsMVPApp.swift */,
 				5086B3442E82DD3400F80D9E /* ePleadingsMVPTests */,
@@ -263,6 +266,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				50A5CFF62E835A3B00BD6624 /* ContentView.swift in Sources */,
+				504074CD2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodeld in Sources */,
 				50A5CFF72E835A3B00BD6624 /* ePleadingsMVPApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -588,6 +592,19 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCVersionGroup section */
+		504074CB2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodeld */ = {
+			isa = XCVersionGroup;
+			children = (
+				504074CC2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodel */,
+			);
+			currentVersion = 504074CC2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodel */;
+			path = ePleadingsMVP.xcdatamodeld;
+			sourceTree = "<group>";
+			versionGroupType = wrapper.xcdatamodel;
+		};
+/* End XCVersionGroup section */
 	};
 	rootObject = 5086B32B2E82DD3300F80D9E /* Project object */;
 }

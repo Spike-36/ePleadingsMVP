@@ -2,8 +2,6 @@
 //  CaseFile.swift
 //  ePleadingsMVP
 //
-//  Created by Peter Milligan on 24/09/2025.
-//
 //  Represents a pair of documents (DOCX + PDF) in a case folder.
 //  Tracks missing counterparts for UI warnings.
 //
@@ -23,12 +21,7 @@ struct CaseFile: Identifiable, Hashable {
     let docxURL: URL?
     
     /// Flags to show in the UI
-    var isPDFMissing: Bool {
-        docxURL != nil && pdfURL == nil
-    }
-    
-    var isDOCXMissing: Bool {
-        pdfURL != nil && docxURL == nil
-    }
+    var isPDFMissing: Bool { pdfURL == nil }
+    var isDOCXMissing: Bool { docxURL == nil }
 }
 

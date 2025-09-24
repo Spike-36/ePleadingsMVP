@@ -13,7 +13,8 @@ import UniformTypeIdentifiers
 final class ImportService: ObservableObject {
     @Published var importedFiles: [CaseFile] = []
     
-    func importFile() {
+    /// Import a file into a specific case (defaults to "DefaultCase").
+    func importFile(into caseName: String = "DefaultCase") {
         DispatchQueue.main.async {
             let panel = NSOpenPanel()
             panel.allowsMultipleSelection = false
@@ -26,11 +27,10 @@ final class ImportService: ObservableObject {
             
             if panel.runModal() == .OK, let pickedURL = panel.url {
                 let ext = pickedURL.pathExtension.lowercased()
-                let name = pickedURL.deletingPathExtension().lastPathComponent
-                let safeName = FileHelper.safeName(from: name)
+                let safeName = FileHelper.safeName(from: caseName)
                 
                 do {
-                    // Copy file into sandbox
+                    // Copy file into the chosen case folder
                     let destination = try FileHelper.copyFile(pickedURL, toCaseFolder: safeName)
                     
                     // See if we already have a CaseFile for this case
@@ -64,6 +64,26 @@ final class ImportService: ObservableObject {
                     print("❌ ImportService failed: \(error)")
                 }
             }
+        }
+    }
+    
+    /// Load existing files for a case from disk.
+    func loadFiles(for caseName: String) {
+        do {
+            let folder = try FileHelper.caseFolder(named: caseName)
+            let pdfURL = folder.appendingPathComponent("\(caseName).pdf")
+            let docxURL = folder.appendingPathComponent("\(caseName).docx")
+            
+            let caseFile = CaseFile(
+                caseName: caseName,
+                pdfURL: FileManager.default.fileExists(atPath: pdfURL.path) ? pdfURL : nil,
+                docxURL: FileManager.default.fileExists(atPath: docxURL.path) ? docxURL : nil
+            )
+            self.importedFiles = [caseFile]
+            
+        } catch {
+            print("❌ loadFiles failed: \(error)")
+            self.importedFiles = []
         }
     }
 }

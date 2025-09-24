@@ -1,3 +1,10 @@
+//
+//  ImportService.swift
+//  ePleadingsMVP
+//
+//  Handles importing files into the app’s sandbox (macOS).
+//
+
 import Foundation
 import AppKit
 import UniformTypeIdentifiers

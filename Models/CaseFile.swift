@@ -4,11 +4,6 @@
 //
 //  Created by Peter Milligan on 24/09/2025.
 //
-
-//
-//  CaseFile.swift
-//  ePleadingsMVP
-//
 //  Represents a pair of documents (DOCX + PDF) in a case folder.
 //  Tracks missing counterparts for UI warnings.
 //
@@ -36,3 +31,4 @@ struct CaseFile: Identifiable, Hashable {
         pdfURL != nil && docxURL == nil
     }
 }
+

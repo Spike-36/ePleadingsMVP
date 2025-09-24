@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		504074CD2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 504074CB2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodeld */; };
+		504074D82E83D4A200E08A27 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 504074D72E83D4A200E08A27 /* ZIPFoundation */; };
 		50A5CFF62E835A3B00BD6624 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50A5CFF32E835A3B00BD6624 /* ContentView.swift */; };
 		50A5CFF72E835A3B00BD6624 /* ePleadingsMVPApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50A5CFF52E835A3B00BD6624 /* ePleadingsMVPApp.swift */; };
 /* End PBXBuildFile section */
@@ -72,6 +73,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				504074D82E83D4A200E08A27 /* ZIPFoundation in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -140,6 +142,7 @@
 			);
 			name = ePleadingsMVP;
 			packageProductDependencies = (
+				504074D72E83D4A200E08A27 /* ZIPFoundation */,
 			);
 			productName = ePleadingsMVP;
 			productReference = 5086B3332E82DD3300F80D9E /* ePleadingsMVP.app */;
@@ -224,6 +227,9 @@
 			);
 			mainGroup = 5086B32A2E82DD3300F80D9E;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				504074D62E83D4A200E08A27 /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 5086B3342E82DD3300F80D9E /* Products */;
 			projectDirPath = "";
@@ -592,6 +598,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		504074D62E83D4A200E08A27 /* XCRemoteSwiftPackageReference "ZIPFoundation" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/weichsel/ZIPFoundation";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.19;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		504074D72E83D4A200E08A27 /* ZIPFoundation */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 504074D62E83D4A200E08A27 /* XCRemoteSwiftPackageReference "ZIPFoundation" */;
+			productName = ZIPFoundation;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCVersionGroup section */
 		504074CB2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodeld */ = {

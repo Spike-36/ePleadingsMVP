@@ -4,73 +4,97 @@
 //
 //  Created by Peter Milligan on 24/09/2025.
 //
+
 import Foundation
 import ZIPFoundation
 
-/// Simple DOCX parser for MVP.
-/// Extracts <w:t> text runs from document.xml and groups them into paragraphs.
+/// DOCX parser for MVP.
+/// Unzips .docx → extracts /word/document.xml → walks with XMLParser → collects <w:t> runs into paragraphs.
 class DocxParser: NSObject {
-    private var currentElement = ""
-    private var currentText = ""
     private var paragraphs: [String] = []
-    
+    private var currentParagraph: String = ""
+    private var insideText: Bool = false
+
+    /// Parse the DOCX at the given URL and return paragraphs of text.
     func parseDocx(at url: URL) throws -> [String] {
-        // 1. Unzip DOCX (it's a zip archive)
+        // 1. Open as ZIP
         guard let archive = Archive(url: url, accessMode: .read) else {
-            throw NSError(domain: "DocxParser", code: 1, userInfo: [NSLocalizedDescriptionKey: "Not a valid DOCX file"])
+            throw NSError(domain: "DocxParser", code: 1,
+                          userInfo: [NSLocalizedDescriptionKey: "Not a valid DOCX file"])
         }
-        
-        // 2. Extract document.xml from /word/document.xml
+
+        // 2. Extract document.xml to temp
         let tempDir = FileManager.default.temporaryDirectory
         let xmlURL = tempDir.appendingPathComponent(UUID().uuidString + ".xml")
-        
         try archive.extract("word/document.xml", to: xmlURL)
-        
+
         // 3. Parse XML
         let parser = XMLParser(contentsOf: xmlURL)!
         parser.delegate = self
         parser.parse()
-        
+
         return paragraphs
     }
 }
 
+// MARK: - XMLParserDelegate
 extension DocxParser: XMLParserDelegate {
-    func parser(_ parser: XMLParser, didStartElement elementName: String,
-                namespaceURI: String?, qualifiedName qName: String?, attributes attributeDict: [String : String] = [:]) {
-        currentElement = elementName
-        if elementName == "w:p" { // start of paragraph
-            currentText = ""
+    func parser(_ parser: XMLParser,
+                didStartElement elementName: String,
+                namespaceURI: String?,
+                qualifiedName qName: String?,
+                attributes attributeDict: [String : String] = [:]) {
+        switch elementName {
+        case "w:p":
+            currentParagraph = ""   // start new paragraph
+        case "w:t":
+            insideText = true
+        case "w:tab":
+            currentParagraph.append("\t")
+        case "w:br":
+            currentParagraph.append("\n")
+        default:
+            break
         }
     }
-    
+
     func parser(_ parser: XMLParser, foundCharacters string: String) {
-        if currentElement == "w:t" {
-            currentText.append(string)
+        if insideText {
+            currentParagraph.append(string)
         }
     }
-    
-    func parser(_ parser: XMLParser, didEndElement elementName: String,
-                namespaceURI: String?, qualifiedName qName: String?) {
-        if elementName == "w:p" { // end of paragraph
-            let trimmed = currentText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+    func parser(_ parser: XMLParser,
+                didEndElement elementName: String,
+                namespaceURI: String?,
+                qualifiedName qName: String?) {
+        switch elementName {
+        case "w:t":
+            insideText = false
+        case "w:p":
+            let trimmed = currentParagraph.trimmingCharacters(in: .whitespacesAndNewlines)
             if !trimmed.isEmpty {
                 paragraphs.append(trimmed)
             }
+        default:
+            break
         }
-        currentElement = ""
     }
 }
 
+// MARK: - Archive convenience
 private extension Archive {
-    /// Extract a single file to a URL
+    /// Extract a single file inside the archive to a given destination URL
     func extract(_ path: String, to destURL: URL) throws {
         guard let entry = self[path] else {
-            throw NSError(domain: "DocxParser", code: 2, userInfo: [NSLocalizedDescriptionKey: "Missing \(path)"])
+            throw NSError(domain: "DocxParser", code: 2,
+                          userInfo: [NSLocalizedDescriptionKey: "Missing \(path)"])
         }
-        _ = try self.extract(entry, consumer: { data in
-            try? data.write(to: destURL, options: .atomic)
-        })
+        var collected = Data()
+        _ = try self.extract(entry) { data in
+            collected.append(data)
+        }
+        try collected.write(to: destURL, options: .atomic)
     }
 }
 

@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		504074CD2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 504074CB2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodeld */; };
 		504074D82E83D4A200E08A27 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 504074D72E83D4A200E08A27 /* ZIPFoundation */; };
+		504074E32E84AB3400E08A27 /* pleadingsShort.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 504074E22E84AB3400E08A27 /* pleadingsShort.pdf */; };
 		50A5CFF62E835A3B00BD6624 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50A5CFF32E835A3B00BD6624 /* ContentView.swift */; };
 		50A5CFF72E835A3B00BD6624 /* ePleadingsMVPApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50A5CFF52E835A3B00BD6624 /* ePleadingsMVPApp.swift */; };
 /* End PBXBuildFile section */
@@ -32,6 +33,7 @@
 
 /* Begin PBXFileReference section */
 		504074CC2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = ePleadingsMVP.xcdatamodel; sourceTree = "<group>"; };
+		504074E22E84AB3400E08A27 /* pleadingsShort.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = pleadingsShort.pdf; sourceTree = "<group>"; };
 		5086B3332E82DD3300F80D9E /* ePleadingsMVP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ePleadingsMVP.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5086B3412E82DD3400F80D9E /* ePleadingsMVPTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ePleadingsMVPTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5086B34B2E82DD3400F80D9E /* ePleadingsMVPUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ePleadingsMVPUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -97,6 +99,7 @@
 		5086B32A2E82DD3300F80D9E = {
 			isa = PBXGroup;
 			children = (
+				504074E22E84AB3400E08A27 /* pleadingsShort.pdf */,
 				504074C72E83937A00E08A27 /* Views */,
 				504074C02E83833800E08A27 /* Models */,
 				504074B92E837EC000E08A27 /* Services */,
@@ -247,6 +250,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				504074E32E84AB3400E08A27 /* pleadingsShort.pdf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

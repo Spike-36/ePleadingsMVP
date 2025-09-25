@@ -14,8 +14,8 @@ struct ePleadingsMVPApp: App {
 
     var body: some Scene {
         WindowGroup {
-            // 🔹 Swap this to SentenceListView() for pipeline testing
-            SentenceListView()
+            // 🚀 Boot into CaseDetailView (list + PDF side-by-side)
+            CaseDetailView()
                 .environmentObject(importService)
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
         }

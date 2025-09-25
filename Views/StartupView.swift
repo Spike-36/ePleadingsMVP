@@ -4,11 +4,6 @@
 //
 //  Created by Peter Milligan on 24/09/2025.
 //
-
-//
-//  StartupView.swift
-//  ePleadingsMVP
-//
 //  A startup screen like Word: open an existing case or create a new one.
 //
 
@@ -78,6 +73,13 @@ struct StartupView: View {
 
         }
         .frame(minWidth: 600, minHeight: 400)
+        .onAppear {
+            // 👇 Core Data debug calls
+            // Uncomment once if you want to seed a test row:
+            // PersistenceController.shared.saveTestSentence()
+
+            PersistenceController.shared.debugPrintSentences()
+        }
     }
 
     private func createCase() {
@@ -98,3 +100,4 @@ struct StartupView: View {
         }
     }
 }
+

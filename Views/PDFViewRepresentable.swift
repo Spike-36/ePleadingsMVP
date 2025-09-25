@@ -7,7 +7,7 @@ import SwiftUI
 import PDFKit
 
 struct PDFViewRepresentable: NSViewRepresentable {
-    let filename: String
+    let fileURL: URL
     let targetPage: Int
 
     func makeNSView(context: Context) -> PDFView {
@@ -16,9 +16,10 @@ struct PDFViewRepresentable: NSViewRepresentable {
         pdfView.displayMode = .singlePageContinuous
         pdfView.displayDirection = .vertical
 
-        if let url = Bundle.main.url(forResource: filename.replacingOccurrences(of: ".pdf", with: ""), withExtension: "pdf"),
-           let doc = PDFDocument(url: url) {
+        if let doc = PDFDocument(url: fileURL) {
             pdfView.document = doc
+        } else {
+            print("⚠️ Could not load PDF at \(fileURL.path)")
         }
 
         return pdfView

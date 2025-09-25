@@ -43,5 +43,24 @@ extension PersistenceController {
             print("❌ Failed to save test sentence: \(error)")
         }
     }
+    
+    /// Debug: print sentences currently stored in Core Data
+    func debugPrintSentences(limit: Int = 10) {
+        let context = container.viewContext
+        let fetchRequest: NSFetchRequest<Sentence> = Sentence.fetchRequest()
+        
+        do {
+            let results = try context.fetch(fetchRequest)
+            print("📦 Found \(results.count) sentences in Core Data")
+            for s in results.prefix(limit) {
+                let text = s.text ?? "nil"
+                let page = s.pageNumber
+                let source = s.sourceFilename ?? "unknown"
+                print("➡️ \(text) (page \(page), source: \(source))")
+            }
+        } catch {
+            print("⚠️ Failed to fetch sentences: \(error)")
+        }
+    }
 }
 

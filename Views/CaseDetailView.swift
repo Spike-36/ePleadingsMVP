@@ -7,9 +7,19 @@ import SwiftUI
 import PDFKit
 
 struct CaseDetailView: View {
-    @StateObject private var viewModel = CaseViewModel()
+    let caseInfo: CaseInfo   // 👈 passed in from StartupView
+    
+    @StateObject private var viewModel: CaseViewModel
     @State private var selectedSentence: SentenceItem? = nil
-
+    @ObservedObject private var caseManager = CaseManager.shared
+    @StateObject private var importService = ImportService()
+    
+    // Custom init so we can inject CaseInfo into the view model
+    init(caseInfo: CaseInfo) {
+        self.caseInfo = caseInfo
+        _viewModel = StateObject(wrappedValue: CaseViewModel(caseInfo: caseInfo))
+    }
+    
     var body: some View {
         NavigationSplitView {
             // LEFT PANE → sentence list with selection
@@ -18,29 +28,54 @@ struct CaseDetailView: View {
                     VStack(alignment: .leading) {
                         Text(sentence.text)
                             .font(.body)
-
+                        
                         Text("Page: \(sentence.pageNumber)")
                             .font(.caption)
                             .foregroundColor(.secondary)
-
-                        Text(sentence.sourceFilename ?? "")
-                            .font(.caption2)
-                            .foregroundColor(.gray)
+                        
+                        if let url = sentence.sourceURL {
+                            Text(url.lastPathComponent)
+                                .font(.caption2)
+                                .foregroundColor(.gray)
+                        }
                     }
-                    .tag(sentence) // ✅ link row to selection
+                    .tag(sentence)
                 }
             }
-            .navigationTitle("Sentences")
-
+            .navigationTitle(caseInfo.displayName)
+            
         } detail: {
-            if let sentence = selectedSentence {
+            if let sentence = selectedSentence,
+               let url = sentence.sourceURL {
                 PDFViewRepresentable(
-                    filename: sentence.sourceFilename ?? "",
+                    fileURL: url,
                     targetPage: sentence.pageNumber
                 )
             } else {
                 Text("Select a sentence to view its source PDF")
                     .foregroundColor(.secondary)
+            }
+        }
+        .toolbar {
+            // ✅ Back to cases
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    caseManager.closeCase()
+                } label: {
+                    Label("Cases", systemImage: "folder")
+                }
+            }
+            
+            // ✅ Import file into this case
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    if let result = importService.importFileAndReturn(into: caseInfo.displayName) {
+                        print("✅ Imported file: \(result)")
+                        viewModel.reloadCase()
+                    }
+                } label: {
+                    Label("Import", systemImage: "square.and.arrow.down")
+                }
             }
         }
     }

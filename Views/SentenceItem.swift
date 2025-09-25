@@ -4,14 +4,17 @@ struct SentenceItem: Identifiable, Hashable {
     let id: String
     let text: String
     let pageNumber: Int
-    let sourceFilename: String?
+    let sourceURL: URL?
 
-    init(text: String, pageNumber: Int, sourceFilename: String?) {
-        // Construct a stable ID from filename + page + text
-        self.id = "\(sourceFilename ?? "unknown")-\(pageNumber)-\(text)"
+    init(index: Int, text: String, pageNumber: Int, sourceURL: URL?) {
+        // Stable ID: combine source path + paragraph index + hash of text
+        let pathPart = sourceURL?.lastPathComponent ?? "unknown"
+        let hashPart = text.hashValue
+        self.id = "\(pathPart)-\(index)-\(hashPart)"
+        
         self.text = text
         self.pageNumber = pageNumber
-        self.sourceFilename = sourceFilename
+        self.sourceURL = sourceURL
     }
 }
 

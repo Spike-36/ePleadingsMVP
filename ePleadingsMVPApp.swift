@@ -1,23 +1,17 @@
-//
-//  ePleadingsMVPApp.swift
-//  ePleadingsMVP
-//
-//  Created by Peter Milligan on 24/09/2025.
-//
-
 import SwiftUI
 
 @main
 struct ePleadingsMVPApp: App {
-    @StateObject private var importService = ImportService()
-    let persistenceController = PersistenceController.shared
+    @StateObject private var caseManager = CaseManager.shared
 
     var body: some Scene {
         WindowGroup {
-            // 🚀 Boot into CaseDetailView (list + PDF side-by-side)
-            CaseDetailView()
-                .environmentObject(importService)
-                .environment(\.managedObjectContext, persistenceController.container.viewContext)
+            if let active = caseManager.activeCase {
+                // ✅ Pass the active case into CaseDetailView
+                CaseDetailView(caseInfo: active)
+            } else {
+                StartupView()
+            }
         }
     }
 }

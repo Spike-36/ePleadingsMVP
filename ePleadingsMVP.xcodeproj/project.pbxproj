@@ -61,6 +61,11 @@
 			path = FileHelper;
 			sourceTree = "<group>";
 		};
+		506B44822E8688BD00C7F2F5 /* Panels */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Panels;
+			sourceTree = "<group>";
+		};
 		5086B3442E82DD3400F80D9E /* ePleadingsMVPTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = ePleadingsMVPTests;
@@ -102,6 +107,7 @@
 		5086B32A2E82DD3300F80D9E = {
 			isa = PBXGroup;
 			children = (
+				506B44822E8688BD00C7F2F5 /* Panels */,
 				504074EA2E85F90800E08A27 /* FileHelper */,
 				504074E22E84AB3400E08A27 /* pleadingsShort.pdf */,
 				504074C72E83937A00E08A27 /* Views */,
@@ -146,6 +152,7 @@
 				504074C02E83833800E08A27 /* Models */,
 				504074C72E83937A00E08A27 /* Views */,
 				504074EA2E85F90800E08A27 /* FileHelper */,
+				506B44822E8688BD00C7F2F5 /* Panels */,
 			);
 			name = ePleadingsMVP;
 			packageProductDependencies = (

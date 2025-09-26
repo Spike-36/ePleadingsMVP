@@ -46,7 +46,7 @@ struct CaseViewFrame: View {
                 case .issues:
                     Text("Main View: Issues")
                 case .pleadings:
-                    Text("Main View: Pleadings")
+                    PleadingsPanel(caseInfo: caseInfo)   // ✅ swapped in
                 }
             }
         }

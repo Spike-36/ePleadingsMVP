@@ -11,99 +11,128 @@ struct StartupView: View {
     
     @State private var selectedCase: CaseInfo? = nil   // 👉 used for delete
     @State private var navTarget: CaseInfo? = nil      // 👉 drives NavigationLink
+    @State private var showingNewCaseSheet = false
+    @State private var newCaseName: String = ""
     
     var body: some View {
         NavigationStack {
-            List(caseManager.cases, id: \.name) { caseInfo in
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text(caseInfo.displayName)
-                            .foregroundColor(.primary)
-                            // ✅ Single tap = select for delete
-                            .onTapGesture {
-                                selectedCase = caseInfo
-                            }
-                            // ✅ Double tap = navigate to detail
-                            .simultaneousGesture(
-                                TapGesture(count: 2).onEnded {
-                                    navTarget = caseInfo
-                                }
-                            )
-                        
-                        HStack {
-                            Image(systemName: caseInfo.hasDocx ? "doc.fill" : "doc")
-                                .foregroundColor(caseInfo.hasDocx ? .green : .red)
-                            Image(systemName: caseInfo.hasPdf ? "doc.richtext.fill" : "doc.richtext")
-                                .foregroundColor(caseInfo.hasPdf ? .green : .red)
-                        }
+            caseList
+                .navigationTitle("Cases")
+                .toolbar { toolbarContent }
+                .background(navigationLink)
+                .sheet(isPresented: $showingNewCaseSheet) {
+                    newCaseSheet
+                }
+        }
+    }
+}
+
+// MARK: - Case List
+extension StartupView {
+    private var caseList: some View {
+        List(caseManager.cases, id: \.name) { caseInfo in
+            caseRow(for: caseInfo)
+        }
+    }
+    
+    private func caseRow(for caseInfo: CaseInfo) -> some View {
+        HStack {
+            VStack(alignment: .leading) {
+                Text(caseInfo.displayName)
+                    .foregroundColor(.primary)
+                    // ✅ Single tap = select for delete
+                    .onTapGesture {
+                        selectedCase = caseInfo
+                        caseManager.activeCase = caseInfo   // persist
                     }
-                    
-                    Spacer()
-                    
-                    // Selection indicator for delete
-                    Image(systemName: selectedCase == caseInfo ? "checkmark.circle.fill" : "circle")
-                        .foregroundColor(.blue)
+                    // ✅ Double tap = navigate to detail
+                    .simultaneousGesture(
+                        TapGesture(count: 2).onEnded {
+                            navTarget = caseInfo
+                            caseManager.activeCase = caseInfo   // persist
+                        }
+                    )
+                
+                HStack {
+                    Image(systemName: caseInfo.hasDocx ? "doc.fill" : "doc")
+                        .foregroundColor(caseInfo.hasDocx ? .green : .red)
+                    Image(systemName: caseInfo.hasPdf ? "doc.richtext.fill" : "doc.richtext")
+                        .foregroundColor(caseInfo.hasPdf ? .green : .red)
                 }
             }
-            .navigationTitle("Cases")
-            .toolbar {
-                // ➕ New Case
-                ToolbarItem(placement: .automatic) {
-                    Button {
-                        do {
-                            let displayName = "NewCase-\(UUID().uuidString.prefix(4))"
-                            try caseManager.createCase(named: displayName)
-                            print("📂 Created new case: \(displayName)")
-                        } catch {
-                            print("❌ Failed to create new case: \(error)")
-                        }
-                    } label: {
-                        Label("New Case", systemImage: "plus")
-                    }
+            
+            Spacer()
+            
+            // Selection indicator for delete
+            Image(systemName: selectedCase == caseInfo ? "checkmark.circle.fill" : "circle")
+                .foregroundColor(.blue)
+        }
+    }
+}
+
+// MARK: - Toolbar
+extension StartupView {
+    private var toolbarContent: some ToolbarContent {
+        Group {
+            // ➕ New Case
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    showingNewCaseSheet = true
+                } label: {
+                    Label("New Case", systemImage: "plus")
                 }
-                
-                // ⬇️ Import
-                ToolbarItem(placement: .automatic) {
-                    Button {
-                        if let result = importService.importFileAndReturn() {
+            }
+            
+            // ⬇️ Import
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    if let target = selectedCase ?? caseManager.activeCase {
+                        if let result = importService.importFileAndReturn(into: target.name) {
                             print("✅ Imported file: \(result)")
                             caseManager.refreshCases()
+                            caseManager.activeCase = target
+                            selectedCase = target
                         }
-                    } label: {
-                        Label("Import", systemImage: "square.and.arrow.down")
+                    } else {
+                        print("⚠️ No case selected for import")
                     }
-                }
-                
-                // 🗑️ Delete
-                ToolbarItem(placement: .automatic) {
-                    Button(role: .destructive) {
-                        if let caseToDelete = selectedCase {
-                            do {
-                                try caseManager.deleteCase(named: caseToDelete.name)
-                                selectedCase = nil
-                                print("🗑️ Deleted case: \(caseToDelete.displayName)")
-                            } catch {
-                                print("❌ Failed to delete case: \(error)")
-                            }
-                        }
-                    } label: {
-                        Label("Delete", systemImage: "trash")
-                    }
-                    .disabled(selectedCase == nil)
+                } label: {
+                    Label("Import", systemImage: "square.and.arrow.down")
                 }
             }
-            // ✅ NavigationLink driven by navTarget (using isActive form)
-            .background(
-                NavigationLink(
-                    destination: navDestination(),
-                    isActive: Binding(
-                        get: { navTarget != nil },
-                        set: { if !$0 { navTarget = nil } }
-                    )
-                ) { EmptyView() }
-                .hidden()
-            )
+            
+            // 🗑️ Delete
+            ToolbarItem(placement: .automatic) {
+                Button(role: .destructive) {
+                    if let caseToDelete = selectedCase {
+                        do {
+                            try caseManager.deleteCase(named: caseToDelete.name)
+                            selectedCase = nil
+                            print("🗑️ Deleted case: \(caseToDelete.displayName)")
+                        } catch {
+                            print("❌ Failed to delete case: \(error)")
+                        }
+                    }
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+                .disabled(selectedCase == nil)
+            }
         }
+    }
+}
+
+// MARK: - Navigation
+extension StartupView {
+    private var navigationLink: some View {
+        NavigationLink(
+            destination: navDestination(),
+            isActive: Binding(
+                get: { navTarget != nil },
+                set: { if !$0 { navTarget = nil } }
+            )
+        ) { EmptyView() }
+        .hidden()
     }
     
     @ViewBuilder
@@ -117,6 +146,40 @@ struct StartupView: View {
         } else {
             EmptyView()
         }
+    }
+}
+
+// MARK: - New Case Sheet
+extension StartupView {
+    private var newCaseSheet: some View {
+        VStack {
+            Text("Enter new case name:")
+                .font(.headline)
+            TextField("Case name", text: $newCaseName)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .padding()
+            HStack {
+                Button("Cancel") {
+                    showingNewCaseSheet = false
+                    newCaseName = ""
+                }
+                Spacer()
+                Button("Create") {
+                    do {
+                        try caseManager.createCase(named: newCaseName)
+                        print("📂 Created new case: \(newCaseName)")
+                    } catch {
+                        print("❌ Failed to create new case: \(error)")
+                    }
+                    showingNewCaseSheet = false
+                    newCaseName = ""
+                }
+                .disabled(newCaseName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+            .padding()
+        }
+        .padding()
+        .frame(width: 350, height: 150)
     }
 }
 

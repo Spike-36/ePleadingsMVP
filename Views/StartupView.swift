@@ -10,30 +10,23 @@ struct StartupView: View {
     private let importService = ImportService()
     
     @State private var selectedCase: CaseInfo? = nil   // 👉 used for delete
-    @State private var navTarget: CaseInfo? = nil      // 👉 drives NavigationLink
+    @State private var navTarget: CaseInfo? = nil      // 👉 drives CaseDetailView
     @State private var showingNewCaseSheet = false
     @State private var newCaseName: String = ""
     
     // 👉 New: toggle for launching CaseViewFrame
-    @State private var showCaseViewFrame = false
+    @State private var frameTarget: CaseInfo? = nil
     
     var body: some View {
         NavigationStack {
             caseList
                 .navigationTitle("Cases")
                 .toolbar { toolbarContent }
-                .background(navigationLink)
+                .background(detailNavigationLink)
+                .background(frameNavigationLink)
                 .sheet(isPresented: $showingNewCaseSheet) {
                     newCaseSheet
                 }
-                // 👉 NavigationLink to CaseViewFrame
-                .background(
-                    NavigationLink(
-                        destination: CaseViewFrame(),
-                        isActive: $showCaseViewFrame
-                    ) { EmptyView() }
-                    .hidden()
-                )
         }
     }
 }
@@ -51,18 +44,10 @@ extension StartupView {
             VStack(alignment: .leading) {
                 Text(caseInfo.displayName)
                     .foregroundColor(.primary)
-                    // ✅ Single tap = select for delete
                     .onTapGesture {
                         selectedCase = caseInfo
                         caseManager.activeCase = caseInfo   // persist
                     }
-                    // ✅ Double tap = navigate to detail
-                    .simultaneousGesture(
-                        TapGesture(count: 2).onEnded {
-                            navTarget = caseInfo
-                            caseManager.activeCase = caseInfo   // persist
-                        }
-                    )
                 
                 HStack {
                     Image(systemName: caseInfo.hasDocx ? "doc.fill" : "doc")
@@ -74,7 +59,6 @@ extension StartupView {
             
             Spacer()
             
-            // Selection indicator for delete
             Image(systemName: selectedCase == caseInfo ? "checkmark.circle.fill" : "circle")
                 .foregroundColor(.blue)
         }
@@ -130,12 +114,29 @@ extension StartupView {
                 .disabled(selectedCase == nil)
             }
             
-            // 🧪 Frame Test (new)
+            // 🧪 Frame Test → CaseViewFrame
             ToolbarItem(placement: .automatic) {
                 Button {
-                    showCaseViewFrame = true
+                    if let target = selectedCase ?? caseManager.activeCase {
+                        frameTarget = target   // 🔑 triggers navigation to CaseViewFrame
+                    } else {
+                        print("⚠️ No case selected to view frame")
+                    }
                 } label: {
                     Label("Frame Test", systemImage: "square.grid.2x2")
+                }
+            }
+            
+            // 📄 Detail Test → CaseDetailView
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    if let target = selectedCase ?? caseManager.activeCase {
+                        navTarget = target   // 🔑 triggers navigation to CaseDetailView
+                    } else {
+                        print("⚠️ No case selected to view detail")
+                    }
+                } label: {
+                    Label("Detail Test", systemImage: "doc.text.magnifyingglass")
                 }
             }
         }
@@ -144,12 +145,23 @@ extension StartupView {
 
 // MARK: - Navigation
 extension StartupView {
-    private var navigationLink: some View {
+    private var detailNavigationLink: some View {
         NavigationLink(
             destination: navDestination(),
             isActive: Binding(
                 get: { navTarget != nil },
                 set: { if !$0 { navTarget = nil } }
+            )
+        ) { EmptyView() }
+        .hidden()
+    }
+    
+    private var frameNavigationLink: some View {
+        NavigationLink(
+            destination: frameDestination(),
+            isActive: Binding(
+                get: { frameTarget != nil },
+                set: { if !$0 { frameTarget = nil } }
             )
         ) { EmptyView() }
         .hidden()
@@ -163,8 +175,13 @@ extension StartupView {
             } else {
                 MissingFilesView(caseInfo: caseInfo)
             }
-        } else {
-            EmptyView()
+        }
+    }
+    
+    @ViewBuilder
+    private func frameDestination() -> some View {
+        if let caseInfo = frameTarget {
+            CaseViewFrame(caseInfo: caseInfo)
         }
     }
 }

@@ -4,10 +4,6 @@
 //
 //  Created by Peter Milligan on 26/09/2025.
 //
-//
-//  CaseViewFrame.swift
-//  ePleadingsMVP
-//
 
 import SwiftUI
 
@@ -19,6 +15,8 @@ enum CaseViewMode: String, CaseIterable, Identifiable {
 }
 
 struct CaseViewFrame: View {
+    let caseInfo: CaseInfo   // ✅ now accepts the case being passed in
+    
     @State private var mode: CaseViewMode = .issues
     @Environment(\.dismiss) private var dismiss
     
@@ -52,7 +50,7 @@ struct CaseViewFrame: View {
                 }
             }
         }
-        .navigationTitle("Case View Frame")
+        .navigationTitle(caseInfo.displayName)  // ✅ show the case name here
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 Button("Back") {

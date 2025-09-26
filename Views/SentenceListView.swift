@@ -19,77 +19,71 @@ struct SentenceListView: View {
     var body: some View {
         VStack {
             HStack {
-                Button("Add Dummy") { addDummySentence() }
-                    .padding(.trailing, 8)
+                Button("Add Dummy") {
+                    addDummySentence()
+                }
+                .padding(.trailing, 8)
 
-                Button("Import DOCX") { importDocx() }
-                    .padding(.trailing, 8)
+                Button("Import DOCX") {
+                    importDocx()
+                }
+                .padding(.trailing, 8)
 
-                Button("Clear All", role: .destructive) { clearAllSentences() }
-            }
-            .padding(.top, 12)
-
-            Text("Sentences in DB")
-                .font(.headline)
-                .padding(.bottom, 8)
-
-            List(sentences, id: \.id) { sentence in
-                VStack(alignment: .leading) {
-                    Text(sentence.text ?? "")
-                        .font(.body)
-                    Text("Page: \(sentence.pageNumber)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Text(sentence.sourceFilename ?? "")
-                               .font(.caption2)
-                               .foregroundColor(.gray)
+                Button("Clear All", role: .destructive) {
+                    clearAllSentences()
                 }
             }
+            .padding()
+
+            List {
+                ForEach(sentences) { sentence in
+                    Text(sentence.text ?? "Untitled")
+                }
+                .onDelete(perform: deleteSentences)
+            }
         }
-        .padding()
+        .navigationTitle("Sentences")
     }
 
-    // MARK: - Helpers
+    // MARK: - Actions
 
     private func addDummySentence() {
-        let s = Sentence(context: viewContext)
-        s.id = UUID()
-        s.text = "Test sentence at \(Date())"
-        s.pageNumber = Int32(Int.random(in: 1...100))
-        s.sourceFilename = "Dummy.docx"
-        try? viewContext.save()
+        let newSentence = Sentence(context: viewContext)
+        newSentence.text = "This is a dummy sentence."
+
+        // pageNumber is Int32 in Core Data model
+        let nextPage = sentences.count + 1
+        newSentence.pageNumber = Int32(nextPage)
+
+        saveContext()
     }
 
     private func importDocx() {
-        // ✅ Parse immediately from the picker result to avoid duplicate runs
-        guard let caseFile = importService.importFileAndReturn(into: "defaultcase"),
-              let docxURL = caseFile.docxURL else {
-            print("⚠️ No DOCX selected")
-            return
-        }
-
-        do {
-            let parser = DocxParser()
-            let paragraphs = try parser.parseDocx(at: docxURL)
-
-            for (idx, para) in paragraphs.enumerated() {
-                let s = Sentence(context: viewContext)
-                s.id = UUID()
-                s.text = para
-                s.pageNumber = Int32(idx + 1)   // 1-based for readability
-                s.sourceFilename = docxURL.lastPathComponent
-            }
-
-            try viewContext.save()
-            print("✅ Imported \(paragraphs.count) paragraphs")
-        } catch {
-            print("❌ Import failed: \(error.localizedDescription)")
-        }
+        // Hook into your ImportService
+        importService.importFileAndReturn()
     }
 
     private func clearAllSentences() {
-        for s in sentences { viewContext.delete(s) }
-        try? viewContext.save()
+        for sentence in sentences {
+            viewContext.delete(sentence)
+        }
+        saveContext()
+    }
+
+    private func deleteSentences(offsets: IndexSet) {
+        for index in offsets {
+            let sentence = sentences[index]
+            viewContext.delete(sentence)
+        }
+        saveContext()
+    }
+
+    private func saveContext() {
+        do {
+            try viewContext.save()
+        } catch {
+            print("❌ Failed to save context: \(error)")
+        }
     }
 }
 

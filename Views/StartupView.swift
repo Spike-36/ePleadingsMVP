@@ -2,101 +2,92 @@
 //  StartupView.swift
 //  ePleadingsMVP
 //
-//  Created by Peter Milligan on 24/09/2025.
-//
-//  A startup screen like Word: open an existing case or create a new one.
-//
 
 import SwiftUI
 
 struct StartupView: View {
     @ObservedObject var caseManager = CaseManager.shared
-    @State private var newCaseName: String = ""
-    @State private var errorMessage: String?
-
+    private let importService = ImportService()   // ✅ no StateObject
+    @State private var selectedCase: CaseInfo? = nil   // 👈 only used for delete
+    
     var body: some View {
-        HStack {
-            // LEFT: Existing cases
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Recent Cases")
-                    .font(.headline)
-
-                if caseManager.cases.isEmpty {
-                    Text("No cases yet")
-                        .foregroundColor(.secondary)
-                } else {
-                    List(caseManager.cases) { caseInfo in
-                        Button {
-                            caseManager.openCase(caseInfo)
-                        } label: {
-                            HStack {
-                                Image(systemName: "folder")
-                                Text(caseInfo.displayName)
+        NavigationStack {
+            List(caseManager.cases, id: \.name) { caseInfo in
+                HStack {
+                    NavigationLink {
+                        if caseInfo.hasDocx && caseInfo.hasPdf {
+                            CaseDetailView(caseInfo: caseInfo)
+                        } else {
+                            MissingFilesView(caseInfo: caseInfo)
+                        }
+                    } label: {
+                        HStack {
+                            Text(caseInfo.displayName)
+                            Spacer()
+                            // ✅ status indicators
+                            Image(systemName: caseInfo.hasDocx ? "doc.fill" : "doc")
+                                .foregroundColor(caseInfo.hasDocx ? .green : .red)
+                            Image(systemName: caseInfo.hasPdf ? "doc.richtext.fill" : "doc.richtext")
+                                .foregroundColor(caseInfo.hasPdf ? .green : .red)
+                        }
+                    }
+                    
+                    // 👇 Select for delete
+                    Button {
+                        selectedCase = caseInfo
+                    } label: {
+                        Image(systemName: selectedCase == caseInfo ? "checkmark.circle.fill" : "circle")
+                    }
+                    .buttonStyle(.borderless)
+                }
+            }
+            .navigationTitle("Cases")
+            .toolbar {
+                // ✅ New Case
+                ToolbarItem(placement: .automatic) {
+                    Button {
+                        do {
+                            let displayName = "NewCase-\(UUID().uuidString.prefix(4))"
+                            try caseManager.createCase(named: displayName)
+                            print("📂 Created new case: \(displayName)")
+                        } catch {
+                            print("❌ Failed to create new case: \(error)")
+                        }
+                    } label: {
+                        Label("New Case", systemImage: "plus")
+                    }
+                }
+                
+                // ✅ Import Case (generic)
+                ToolbarItem(placement: .automatic) {
+                    Button {
+                        if let result = importService.importFileAndReturn() {
+                            print("✅ Imported file: \(result)")
+                            caseManager.refreshCases()
+                        }
+                    } label: {
+                        Label("Import", systemImage: "square.and.arrow.down")
+                    }
+                }
+                
+                // 🗑️ Delete Case
+                ToolbarItem(placement: .automatic) {
+                    Button(role: .destructive) {
+                        if let caseToDelete = selectedCase {
+                            do {
+                                try caseManager.deleteCase(named: caseToDelete.name)
+                                selectedCase = nil
+                                print("🗑️ Deleted case: \(caseToDelete.displayName)")
+                            } catch {
+                                print("❌ Failed to delete case: \(error)")
                             }
                         }
-                        .buttonStyle(PlainButtonStyle())
+                    } label: {
+                        Label("Delete", systemImage: "trash")
                     }
-                    .frame(minWidth: 200, maxHeight: .infinity)
+                    .disabled(selectedCase == nil)
                 }
-
-                Spacer()
             }
-            .padding()
-            .frame(minWidth: 250)
-
-            Divider()
-
-            // RIGHT: Create new case
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Create New Case")
-                    .font(.headline)
-
-                TextField("Enter case name", text: $newCaseName)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .frame(width: 250)
-
-                Button("Create") {
-                    createCase()
-                }
-                .keyboardShortcut(.defaultAction)
-
-                if let error = errorMessage {
-                    Text(error)
-                        .foregroundColor(.red)
-                        .font(.caption)
-                }
-
-                Spacer()
-            }
-            .padding()
-            .frame(minWidth: 300)
-
-        }
-        .frame(minWidth: 600, minHeight: 400)
-        .onAppear {
-            // 👇 Core Data debug calls
-            // Uncomment once if you want to seed a test row:
-            // PersistenceController.shared.saveTestSentence()
-
-            PersistenceController.shared.debugPrintSentences()
-        }
-    }
-
-    private func createCase() {
-        guard !newCaseName.trimmingCharacters(in: .whitespaces).isEmpty else {
-            errorMessage = "Case name cannot be empty."
-            return
-        }
-
-        do {
-            try caseManager.createCase(named: newCaseName)
-            if let created = caseManager.cases.first(where: { $0.displayName == newCaseName }) {
-                caseManager.openCase(created)
-            }
-            newCaseName = ""
-            errorMessage = nil
-        } catch {
-            errorMessage = error.localizedDescription
         }
     }
 }

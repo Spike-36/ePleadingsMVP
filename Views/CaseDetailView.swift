@@ -5,48 +5,60 @@
 
 import SwiftUI
 import PDFKit
+import CoreData
 
 struct CaseDetailView: View {
     let caseInfo: CaseInfo   // 👈 passed in from StartupView
     
+    @Environment(\.managedObjectContext) private var context
     @StateObject private var viewModel: CaseViewModel
-    @State private var selectedSentence: SentenceItem? = nil
-    @ObservedObject private var caseManager = CaseManager.shared
+    @State private var selectedSentenceID: String? = nil   // 👈 now matches SentenceItem.id
     @StateObject private var importService = ImportService()
     
-    // Custom init so we can inject CaseInfo into the view model
+    // ✅ Single init – always use environment context
     init(caseInfo: CaseInfo) {
         self.caseInfo = caseInfo
-        _viewModel = StateObject(wrappedValue: CaseViewModel(caseInfo: caseInfo))
+        _viewModel = StateObject(
+            wrappedValue: CaseViewModel(
+                caseInfo: caseInfo,
+                context: PersistenceController.shared.container.viewContext
+            )
+        )
     }
     
     var body: some View {
         NavigationSplitView {
             // LEFT PANE → sentence list with selection
-            List(selection: $selectedSentence) {
-                ForEach(viewModel.sentences) { sentence in
-                    VStack(alignment: .leading) {
-                        Text(sentence.text)
-                            .font(.body)
+            List(selection: $selectedSentenceID) {
+                Section(header: Text("Parsed Sentences (debug)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)) {
                         
-                        Text("Page: \(sentence.pageNumber)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        if let url = sentence.sourceURL {
-                            Text(url.lastPathComponent)
-                                .font(.caption2)
-                                .foregroundColor(.gray)
+                    ForEach(viewModel.sentences) { sentence in
+                        VStack(alignment: .leading) {
+                            Text(sentence.text)
+                                .font(.body)
+                            
+                            Text("Page: \(sentence.pageNumber)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            if let filename = sentence.sourceFilename {
+                                Text(filename)
+                                    .font(.caption2)
+                                    .foregroundColor(.gray)
+                            }
                         }
+                        .tag(sentence.id)   // 👈 tag with String
                     }
-                    .tag(sentence)
                 }
             }
             .navigationTitle(caseInfo.displayName)
             
         } detail: {
-            if let sentence = selectedSentence,
-               let url = sentence.sourceURL {
+            if let id = selectedSentenceID,
+               let sentence = viewModel.sentences.first(where: { $0.id == id }),
+               let url = sentence.resolvedURL(in: caseInfo.url) {
                 PDFViewRepresentable(
                     fileURL: url,
                     targetPage: sentence.pageNumber
@@ -57,15 +69,6 @@ struct CaseDetailView: View {
             }
         }
         .toolbar {
-            // ✅ Back to cases
-            ToolbarItem(placement: .automatic) {
-                Button {
-                    caseManager.closeCase()
-                } label: {
-                    Label("Cases", systemImage: "folder")
-                }
-            }
-            
             // ✅ Import file into this case
             ToolbarItem(placement: .automatic) {
                 Button {

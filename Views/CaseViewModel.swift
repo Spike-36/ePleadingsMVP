@@ -5,6 +5,7 @@
 
 import Foundation
 import SwiftUI
+import CoreData
 
 @MainActor
 final class CaseViewModel: ObservableObject {
@@ -12,63 +13,46 @@ final class CaseViewModel: ObservableObject {
     @Published var targetPage: Int? = nil
     
     private let caseInfo: CaseInfo
+    private let context: NSManagedObjectContext
     
-    init(caseInfo: CaseInfo) {
+    init(caseInfo: CaseInfo, context: NSManagedObjectContext) {
         self.caseInfo = caseInfo
-        loadCase()
+        self.context = context
+        loadFromCoreData()
     }
     
-    /// Load sentences for this case
-    private func loadCase() {
-        let fm = FileManager.default
-        let caseURL = caseInfo.url
-        
-        var pdfURL: URL? = nil
-        var docxURL: URL? = nil
-        
-        if let files = try? fm.contentsOfDirectory(at: caseURL, includingPropertiesForKeys: nil) {
-            pdfURL = files.first(where: { $0.pathExtension.lowercased() == "pdf" })
-            docxURL = files.first(where: { $0.pathExtension.lowercased() == "docx" })
-        }
-        
-        // Default fallback PDF
-        let resolvedPDFURL = pdfURL ?? caseURL.appendingPathComponent("pleadingsShort.pdf")
-        print("🔍 Using PDF path:", resolvedPDFURL.path)
-        
-        // Parse DOCX into paragraphs
-        if let docxURL = docxURL {
-            do {
-                let parser = DocxParser()
-                let paragraphs = try parser.parseDocx(at: docxURL)
-                
-                self.sentences = paragraphs.enumerated().map { (idx, text) in
-                    SentenceItem(
-                        index: idx,
-                        text: text,
-                        pageNumber: 1, // stub for now
-                        sourceURL: resolvedPDFURL
-                    )
-                }
-                return
-            } catch {
-                print("⚠️ Failed to parse DOCX at \(docxURL.path): \(error.localizedDescription)")
-            }
-        }
-        
-        // Fallback if no DOCX or parse error
-        self.sentences = [
-            SentenceItem(index: 0,
-                         text: "⚠️ No DOCX found or failed to parse",
-                         pageNumber: 1,
-                         sourceURL: resolvedPDFURL)
+    /// Load sentences for this case ONLY from Core Data
+    private func loadFromCoreData() {
+        let fetch: NSFetchRequest<Sentence> = Sentence.fetchRequest()
+        fetch.sortDescriptors = [
+            NSSortDescriptor(keyPath: \Sentence.pageNumber, ascending: true)
         ]
+        
+        do {
+            let results = try context.fetch(fetch)
+            
+            self.sentences = results.map { sentence in
+                SentenceItem(
+                    id: (sentence.id ?? UUID()).uuidString,
+                    text: sentence.text ?? "",
+                    pageNumber: Int(sentence.pageNumber),
+                    sourceFilename: sentence.sourceFilename
+                )
+            }
+            
+            print("📦 Loaded \(sentences.count) sentences from Core Data")
+        } catch {
+            print("⚠️ Failed to fetch sentences from Core Data: \(error.localizedDescription)")
+            self.sentences = []
+        }
     }
     
-    /// 🔄 Public reload method so the view can refresh its data
+    /// Public method for views to refresh
     func reloadCase() {
-        loadCase()
+        loadFromCoreData()
     }
     
+    /// Set a target page for PDF navigation
     func jumpToPage(_ page: Int) {
         targetPage = page
     }

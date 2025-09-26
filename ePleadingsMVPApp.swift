@@ -1,3 +1,8 @@
+//
+//  ePleadingsMVPApp.swift
+//  ePleadingsMVP
+//
+
 import SwiftUI
 
 @main
@@ -6,12 +11,7 @@ struct ePleadingsMVPApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if let active = caseManager.activeCase {
-                // ✅ Pass the active case into CaseDetailView
-                CaseDetailView(caseInfo: active)
-            } else {
-                StartupView()
-            }
+            StartupView()   // ✅ Always start here
         }
     }
 }

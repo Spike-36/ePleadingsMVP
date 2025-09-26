@@ -26,7 +26,6 @@ final class ImportService: ObservableObject {
     }
 
     /// Synchronous import that RETURNS the CaseFile so callers can act immediately.
-    /// Use this in SentenceListView to avoid double-processing.
     func importFileAndReturn(into caseName: String = "DefaultCase") -> CaseFile? {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = false
@@ -41,10 +40,10 @@ final class ImportService: ObservableObject {
 
         let safeName = FileHelper.safeName(from: caseName)
         do {
-            // Copy the picked file into the sandbox case folder
-            _ = try FileHelper.copyFile(pickedURL, toCaseFolder: safeName)
+            // ✅ Correct argument order
+            _ = try FileHelper.copyFile(from: pickedURL, toCase: safeName)
 
-            // Build a CaseFile by checking what now exists on disk
+            // ✅ caseFolder is throwing, so call with try
             let folder = try FileHelper.caseFolder(named: safeName)
             let pdf = folder.appendingPathComponent("\(safeName).pdf")
             let docx = folder.appendingPathComponent("\(safeName).docx")

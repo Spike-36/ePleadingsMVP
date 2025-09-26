@@ -14,6 +14,9 @@ struct StartupView: View {
     @State private var showingNewCaseSheet = false
     @State private var newCaseName: String = ""
     
+    // 👉 New: toggle for launching CaseViewFrame
+    @State private var showCaseViewFrame = false
+    
     var body: some View {
         NavigationStack {
             caseList
@@ -23,6 +26,14 @@ struct StartupView: View {
                 .sheet(isPresented: $showingNewCaseSheet) {
                     newCaseSheet
                 }
+                // 👉 NavigationLink to CaseViewFrame
+                .background(
+                    NavigationLink(
+                        destination: CaseViewFrame(),
+                        isActive: $showCaseViewFrame
+                    ) { EmptyView() }
+                    .hidden()
+                )
         }
     }
 }
@@ -117,6 +128,15 @@ extension StartupView {
                     Label("Delete", systemImage: "trash")
                 }
                 .disabled(selectedCase == nil)
+            }
+            
+            // 🧪 Frame Test (new)
+            ToolbarItem(placement: .automatic) {
+                Button {
+                    showCaseViewFrame = true
+                } label: {
+                    Label("Frame Test", systemImage: "square.grid.2x2")
+                }
             }
         }
     }

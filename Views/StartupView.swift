@@ -7,24 +7,30 @@ import SwiftUI
 
 struct StartupView: View {
     @ObservedObject var caseManager = CaseManager.shared
-    private let importService = ImportService()   // ✅ no StateObject
-    @State private var selectedCase: CaseInfo? = nil   // 👈 only used for delete
+    private let importService = ImportService()
+    
+    @State private var selectedCase: CaseInfo? = nil   // 👉 used for delete
+    @State private var navTarget: CaseInfo? = nil      // 👉 drives NavigationLink
     
     var body: some View {
         NavigationStack {
             List(caseManager.cases, id: \.name) { caseInfo in
                 HStack {
-                    NavigationLink {
-                        if caseInfo.hasDocx && caseInfo.hasPdf {
-                            CaseDetailView(caseInfo: caseInfo)
-                        } else {
-                            MissingFilesView(caseInfo: caseInfo)
-                        }
-                    } label: {
+                    VStack(alignment: .leading) {
+                        Text(caseInfo.displayName)
+                            .foregroundColor(.primary)
+                            // ✅ Single tap = select for delete
+                            .onTapGesture {
+                                selectedCase = caseInfo
+                            }
+                            // ✅ Double tap = navigate to detail
+                            .simultaneousGesture(
+                                TapGesture(count: 2).onEnded {
+                                    navTarget = caseInfo
+                                }
+                            )
+                        
                         HStack {
-                            Text(caseInfo.displayName)
-                            Spacer()
-                            // ✅ status indicators
                             Image(systemName: caseInfo.hasDocx ? "doc.fill" : "doc")
                                 .foregroundColor(caseInfo.hasDocx ? .green : .red)
                             Image(systemName: caseInfo.hasPdf ? "doc.richtext.fill" : "doc.richtext")
@@ -32,18 +38,16 @@ struct StartupView: View {
                         }
                     }
                     
-                    // 👇 Select for delete
-                    Button {
-                        selectedCase = caseInfo
-                    } label: {
-                        Image(systemName: selectedCase == caseInfo ? "checkmark.circle.fill" : "circle")
-                    }
-                    .buttonStyle(.borderless)
+                    Spacer()
+                    
+                    // Selection indicator for delete
+                    Image(systemName: selectedCase == caseInfo ? "checkmark.circle.fill" : "circle")
+                        .foregroundColor(.blue)
                 }
             }
             .navigationTitle("Cases")
             .toolbar {
-                // ✅ New Case
+                // ➕ New Case
                 ToolbarItem(placement: .automatic) {
                     Button {
                         do {
@@ -58,7 +62,7 @@ struct StartupView: View {
                     }
                 }
                 
-                // ✅ Import Case (generic)
+                // ⬇️ Import
                 ToolbarItem(placement: .automatic) {
                     Button {
                         if let result = importService.importFileAndReturn() {
@@ -70,7 +74,7 @@ struct StartupView: View {
                     }
                 }
                 
-                // 🗑️ Delete Case
+                // 🗑️ Delete
                 ToolbarItem(placement: .automatic) {
                     Button(role: .destructive) {
                         if let caseToDelete = selectedCase {
@@ -88,6 +92,30 @@ struct StartupView: View {
                     .disabled(selectedCase == nil)
                 }
             }
+            // ✅ NavigationLink driven by navTarget (using isActive form)
+            .background(
+                NavigationLink(
+                    destination: navDestination(),
+                    isActive: Binding(
+                        get: { navTarget != nil },
+                        set: { if !$0 { navTarget = nil } }
+                    )
+                ) { EmptyView() }
+                .hidden()
+            )
+        }
+    }
+    
+    @ViewBuilder
+    private func navDestination() -> some View {
+        if let caseInfo = navTarget {
+            if caseInfo.hasDocx && caseInfo.hasPdf {
+                CaseDetailView(caseInfo: caseInfo)
+            } else {
+                MissingFilesView(caseInfo: caseInfo)
+            }
+        } else {
+            EmptyView()
         }
     }
 }

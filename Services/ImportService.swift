@@ -8,6 +8,7 @@
 import Foundation
 import AppKit
 import UniformTypeIdentifiers
+import CoreData
 
 /// Service to handle importing files into the app’s sandbox (macOS).
 final class ImportService: ObservableObject {
@@ -53,19 +54,31 @@ final class ImportService: ObservableObject {
             print("   PDF exists? \(FileManager.default.fileExists(atPath: pdf.path))")
             print("   DOCX exists? \(FileManager.default.fileExists(atPath: docx.path))")
 
-            // ✅ If DOCX exists, parse it for headings
+            // ✅ If DOCX exists, parse it for paragraphs + save to Core Data
             if FileManager.default.fileExists(atPath: docx.path) {
                 let parser = DocxParser()
                 do {
                     let paragraphs = try parser.parseDocx(at: docx)
                     print("📄 Parsed \(paragraphs.count) paragraphs from \(docx.lastPathComponent)")
 
-                    // Naive heading detection: log any paragraph that looks like a heading
-                    for p in paragraphs {
-                        if p.uppercased() == p && p.count > 3 { // crude all-caps heuristic
+                    let context = PersistenceController.shared.container.viewContext
+
+                    for (idx, p) in paragraphs.enumerated() {
+                        let sentence = Sentence(context: context)
+                        sentence.id = UUID()
+                        sentence.text = p
+                        sentence.pageNumber = Int32(idx + 1) // crude order = “page”
+                        sentence.sourceFilename = docx.lastPathComponent
+
+                        // Simple heading flag (all caps heuristic)
+                        if p.uppercased() == p && p.count > 3 {
                             print("🔖 HEADING detected: \(p)")
                         }
                     }
+
+                    try context.save()
+                    print("💾 Saved \(paragraphs.count) sentences into Core Data for case \(safeName)")
+
                 } catch {
                     print("⚠️ Failed to parse DOCX: \(error)")
                 }

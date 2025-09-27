@@ -73,6 +73,16 @@ final class ImportService: ObservableObject {
                         // Simple heading flag (all caps heuristic)
                         if p.uppercased() == p && p.count > 3 {
                             print("🔖 HEADING detected: \(p)")
+
+                            let heading = HeadingEntity(context: context)
+                            heading.id = UUID()
+                            heading.text = p
+                            heading.level = 1 // TODO: refine heading levels later
+                            heading.pageNumber = Int32(idx + 1)
+                            heading.sourceFilename = docx.lastPathComponent
+
+                            // Optionally link the sentence to the heading
+                            sentence.parentHeading = heading
                         }
                     }
 

@@ -75,9 +75,36 @@ extension PersistenceController {
         }
     }
     
-    /// Debug: placeholder for headings (extend once Headings entity exists)
+    /// Debug: print headings currently stored in Core Data
     func debugPrintHeadings(limit: Int? = nil) {
-        print("ℹ️ Headings debug not yet implemented")
+        let context = container.viewContext
+        let fetchRequest: NSFetchRequest<HeadingEntity> = HeadingEntity.fetchRequest()
+        
+        do {
+            let results = try context.fetch(fetchRequest)
+            print("📦 Found \(results.count) headings in Core Data")
+            
+            let slice: ArraySlice<HeadingEntity>
+            if let limit = limit {
+                slice = results.prefix(limit)
+            } else {
+                slice = results[...]
+            }
+            
+            for (index, h) in slice.enumerated() {
+                let text = h.text ?? "nil"
+                let page = h.pageNumber
+                let source = h.sourceFilename ?? "unknown"
+                let level = h.level
+                print("(\(index + 1)) ➡️ \(text) (level \(level), page \(page), source: \(source))")
+            }
+            
+            if let limit = limit, results.count > limit {
+                print("… ⚠️ \(results.count - limit) more headings not shown")
+            }
+        } catch {
+            print("⚠️ Failed to fetch headings: \(error)")
+        }
     }
 }
 

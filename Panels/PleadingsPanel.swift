@@ -48,8 +48,9 @@ struct PleadingsPanel: View {
                         Text("No DOCX paragraphs loaded.")
                             .foregroundColor(.secondary)
                     } else {
-                        List(docxParagraphs, id: \.self) { p in
-                            Text(p)
+                        // ✅ Use indices as IDs to avoid duplicate warnings
+                        List(docxParagraphs.indices, id: \.self) { i in
+                            Text(docxParagraphs[i])
                                 .font(.body)
                                 .padding(.vertical, 2)
                         }

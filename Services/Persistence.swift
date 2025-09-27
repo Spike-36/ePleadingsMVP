@@ -45,22 +45,39 @@ extension PersistenceController {
     }
     
     /// Debug: print sentences currently stored in Core Data
-    func debugPrintSentences(limit: Int = 10) {
+    func debugPrintSentences(limit: Int? = nil) {
         let context = container.viewContext
         let fetchRequest: NSFetchRequest<Sentence> = Sentence.fetchRequest()
         
         do {
             let results = try context.fetch(fetchRequest)
             print("📦 Found \(results.count) sentences in Core Data")
-            for s in results.prefix(limit) {
+            
+            let slice: ArraySlice<Sentence>
+            if let limit = limit {
+                slice = results.prefix(limit)
+            } else {
+                slice = results[...]
+            }
+            
+            for (index, s) in slice.enumerated() {
                 let text = s.text ?? "nil"
                 let page = s.pageNumber
                 let source = s.sourceFilename ?? "unknown"
-                print("➡️ \(text) (page \(page), source: \(source))")
+                print("(\(index + 1)) ➡️ \(text) (page \(page), source: \(source))")
+            }
+            
+            if let limit = limit, results.count > limit {
+                print("… ⚠️ \(results.count - limit) more sentences not shown")
             }
         } catch {
             print("⚠️ Failed to fetch sentences: \(error)")
         }
+    }
+    
+    /// Debug: placeholder for headings (extend once Headings entity exists)
+    func debugPrintHeadings(limit: Int? = nil) {
+        print("ℹ️ Headings debug not yet implemented")
     }
 }
 

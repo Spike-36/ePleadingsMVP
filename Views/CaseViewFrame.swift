@@ -53,8 +53,15 @@ struct CaseViewFrame: View {
         .navigationTitle(caseInfo.displayName)  // ✅ show the case name here
         .toolbar {
             ToolbarItem(placement: .navigation) {
-                Button("Back") {
-                    dismiss()
+                Button("Back") { dismiss() }
+            }
+            
+            ToolbarItem(placement: .automatic) {
+                Button("Debug DB") {
+                    let persistence = PersistenceController.shared
+                    persistence.debugPrintSentences(limit: 20)
+                    // (Optional) add a similar call for headings later
+                    // persistence.debugPrintHeadings(limit: 20)
                 }
             }
         }

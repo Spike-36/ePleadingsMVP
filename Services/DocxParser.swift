@@ -28,12 +28,36 @@ class DocxParser: NSObject {
         let xmlURL = tempDir.appendingPathComponent(UUID().uuidString + ".xml")
         try archive.extract("word/document.xml", to: xmlURL)
 
+        // Reset before parsing
+        paragraphs = []
+
         // 3. Parse XML
         let parser = XMLParser(contentsOf: xmlURL)!
         parser.delegate = self
         parser.parse()
 
         return paragraphs
+    }
+
+    /// Stage 3.2 stub:
+    /// Scan parsed paragraphs for headings like "Statement 1" / "Answer 2"
+    func parseHeadings(at url: URL) throws -> [String] {
+        let paras = try parseDocx(at: url)
+
+        // Regex: heading if starts with Statement N or Answer N
+        let regex = try NSRegularExpression(pattern: "^(Statement|Answer)\\s+\\d+",
+                                            options: [.caseInsensitive])
+
+        var found: [String] = []
+        for para in paras {
+            let range = NSRange(para.startIndex..<para.endIndex, in: para)
+            if regex.firstMatch(in: para, options: [], range: range) != nil {
+                print("📑 Found heading: \(para)")
+                found.append(para)
+            }
+        }
+
+        return found
     }
 }
 

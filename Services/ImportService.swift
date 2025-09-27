@@ -40,13 +40,36 @@ final class ImportService: ObservableObject {
 
         let safeName = FileHelper.safeName(from: caseName)
         do {
-            // ✅ Correct argument order
-            _ = try FileHelper.copyFile(from: pickedURL, toCase: safeName)
+            // ✅ Copy into case folder
+            let copiedURL = try FileHelper.copyFile(from: pickedURL, toCase: safeName)
 
-            // ✅ caseFolder is throwing, so call with try
+            // ✅ Resolve case folder paths
             let folder = try FileHelper.caseFolder(named: safeName)
             let pdf = folder.appendingPathComponent("\(safeName).pdf")
             let docx = folder.appendingPathComponent("\(safeName).docx")
+
+            // 🔍 Debug prints for file presence
+            print("✅ Saved \(pickedURL.lastPathComponent) → \(copiedURL.lastPathComponent)")
+            print("   PDF exists? \(FileManager.default.fileExists(atPath: pdf.path))")
+            print("   DOCX exists? \(FileManager.default.fileExists(atPath: docx.path))")
+
+            // ✅ If DOCX exists, parse it for headings
+            if FileManager.default.fileExists(atPath: docx.path) {
+                let parser = DocxParser()
+                do {
+                    let paragraphs = try parser.parseDocx(at: docx)
+                    print("📄 Parsed \(paragraphs.count) paragraphs from \(docx.lastPathComponent)")
+
+                    // Naive heading detection: log any paragraph that looks like a heading
+                    for p in paragraphs {
+                        if p.uppercased() == p && p.count > 3 { // crude all-caps heuristic
+                            print("🔖 HEADING detected: \(p)")
+                        }
+                    }
+                } catch {
+                    print("⚠️ Failed to parse DOCX: \(error)")
+                }
+            }
 
             let result = CaseFile(
                 caseName: safeName,

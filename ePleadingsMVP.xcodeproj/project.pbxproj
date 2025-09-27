@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		500DC0232E874EDA0004E43E /* CaseDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 500DC01B2E874EDA0004E43E /* CaseDetailView.swift */; };
 		504074CD2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 504074CB2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodeld */; };
 		504074D82E83D4A200E08A27 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 504074D72E83D4A200E08A27 /* ZIPFoundation */; };
 		504074E32E84AB3400E08A27 /* pleadingsShort.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 504074E22E84AB3400E08A27 /* pleadingsShort.pdf */; };
@@ -31,6 +32,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		500DC01B2E874EDA0004E43E /* CaseDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaseDetailView.swift; sourceTree = "<group>"; };
 		504074CC2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = ePleadingsMVP.xcdatamodel; sourceTree = "<group>"; };
 		504074E22E84AB3400E08A27 /* pleadingsShort.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = pleadingsShort.pdf; sourceTree = "<group>"; };
 		5086B3332E82DD3300F80D9E /* ePleadingsMVP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ePleadingsMVP.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -115,6 +117,7 @@
 				504074B92E837EC000E08A27 /* Services */,
 				504074CB2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodeld */,
 				50A5CFF42E835A3B00BD6624 /* ePleadingsMVP.entitlements */,
+				500DC01B2E874EDA0004E43E /* CaseDetailView.swift */,
 				50A5CFF52E835A3B00BD6624 /* ePleadingsMVPApp.swift */,
 				5086B3442E82DD3400F80D9E /* ePleadingsMVPTests */,
 				5086B34E2E82DD3400F80D9E /* ePleadingsMVPUITests */,
@@ -286,6 +289,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				500DC0232E874EDA0004E43E /* CaseDetailView.swift in Sources */,
 				504074CD2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodeld in Sources */,
 				50A5CFF72E835A3B00BD6624 /* ePleadingsMVPApp.swift in Sources */,
 			);

@@ -49,10 +49,22 @@ enum FileHelper {
         return folder
     }
 
-    // MARK: - File copy
+    // MARK: - File copy (with normalization)
     static func copyFile(from source: URL, toCase caseName: String) throws -> URL {
         let folder = try caseFolder(named: caseName)
-        let dest = folder.appendingPathComponent(source.lastPathComponent)
+
+        // Normalize name if PDF or DOCX
+        let ext = source.pathExtension.lowercased()
+        let destFileName: String
+        if ext == "pdf" {
+            destFileName = "\(caseName).pdf"
+        } else if ext == "docx" {
+            destFileName = "\(caseName).docx"
+        } else {
+            destFileName = source.lastPathComponent // keep original name
+        }
+
+        let dest = folder.appendingPathComponent(destFileName)
 
         // Avoid overwriting an existing file
         if FileManager.default.fileExists(atPath: dest.path) {

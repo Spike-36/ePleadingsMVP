@@ -64,7 +64,7 @@ final class ImportService: ObservableObject {
                     let context = PersistenceController.shared.container.viewContext
 
                     for (idx, p) in paragraphs.enumerated() {
-                        let sentence = Sentence(context: context)
+                        let sentence = SentenceEntity(context: context)
                         sentence.id = UUID()
                         sentence.text = p
                         sentence.pageNumber = Int32(idx + 1) // crude order = “page”
@@ -82,7 +82,7 @@ final class ImportService: ObservableObject {
                             heading.sourceFilename = docx.lastPathComponent
 
                             // Optionally link the sentence to the heading
-                            sentence.parentHeading = heading
+                            sentence.heading = heading
                         }
                     }
 

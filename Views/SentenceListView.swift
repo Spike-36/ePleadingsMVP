@@ -11,10 +11,10 @@ struct SentenceListView: View {
     @StateObject private var importService = ImportService()
 
     @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \Sentence.pageNumber, ascending: true)],
+        sortDescriptors: [NSSortDescriptor(keyPath: \SentenceEntity.pageNumber, ascending: true)],
         animation: .default
     )
-    private var sentences: FetchedResults<Sentence>
+    private var sentences: FetchedResults<SentenceEntity>
 
     var body: some View {
         VStack {
@@ -48,10 +48,10 @@ struct SentenceListView: View {
     // MARK: - Actions
 
     private func addDummySentence() {
-        let newSentence = Sentence(context: viewContext)
+        let newSentence = SentenceEntity(context: viewContext)
         newSentence.text = "This is a dummy sentence."
 
-        // pageNumber is Int32 in Core Data model
+        // Use count of current fetch for pageNumber
         let nextPage = sentences.count + 1
         newSentence.pageNumber = Int32(nextPage)
 
@@ -59,7 +59,6 @@ struct SentenceListView: View {
     }
 
     private func importDocx() {
-        // Hook into your ImportService
         importService.importFileAndReturn()
     }
 

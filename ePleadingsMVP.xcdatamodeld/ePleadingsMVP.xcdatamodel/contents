@@ -1,16 +1,18 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="23788" systemVersion="24G84" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
-    <entity name="HeadingEntity" representedClassName=".HeadingEntity" syncable="YES" codeGenerationType="class">
+    <entity name="HeadingEntity" representedClassName=".HeadingEntity" syncable="YES">
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="level" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="pageNumber" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="sourceFilename" optional="YES" attributeType="String"/>
         <attribute name="text" optional="YES" attributeType="String"/>
+        <relationship name="sentences" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="SentenceEntity" inverseName="heading" inverseEntity="SentenceEntity"/>
     </entity>
-    <entity name="Sentence" representedClassName="Sentence" syncable="YES" codeGenerationType="class">
+    <entity name="SentenceEntity" representedClassName=".SentenceEntity" syncable="YES">
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="pageNumber" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="sourceFilename" optional="YES" attributeType="String"/>
         <attribute name="text" optional="YES" attributeType="String"/>
+        <relationship name="heading" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="HeadingEntity" inverseName="sentences" inverseEntity="HeadingEntity"/>
     </entity>
 </model>

@@ -23,9 +23,9 @@ final class CaseViewModel: ObservableObject {
     
     /// Load sentences for this case ONLY from Core Data
     private func loadFromCoreData() {
-        let fetch: NSFetchRequest<Sentence> = Sentence.fetchRequest()
+        let fetch: NSFetchRequest<SentenceEntity> = SentenceEntity.fetchRequest()
         fetch.sortDescriptors = [
-            NSSortDescriptor(keyPath: \Sentence.pageNumber, ascending: true)
+            NSSortDescriptor(keyPath: \SentenceEntity.pageNumber, ascending: true)
         ]
         
         do {

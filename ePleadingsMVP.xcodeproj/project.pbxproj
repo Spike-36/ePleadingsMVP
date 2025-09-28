@@ -11,6 +11,10 @@
 		504074CD2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 504074CB2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodeld */; };
 		504074D82E83D4A200E08A27 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 504074D72E83D4A200E08A27 /* ZIPFoundation */; };
 		504074E32E84AB3400E08A27 /* pleadingsShort.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 504074E22E84AB3400E08A27 /* pleadingsShort.pdf */; };
+		507F6C612E88C36600614823 /* HeadingEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507F6C5D2E88C36600614823 /* HeadingEntity+CoreDataClass.swift */; };
+		507F6C642E88C36600614823 /* HeadingEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507F6C5E2E88C36600614823 /* HeadingEntity+CoreDataProperties.swift */; };
+		507F6C672E88C45800614823 /* SentenceEntity+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507F6C652E88C45800614823 /* SentenceEntity+CoreDataClass.swift */; };
+		507F6C682E88C45800614823 /* SentenceEntity+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 507F6C662E88C45800614823 /* SentenceEntity+CoreDataProperties.swift */; };
 		50A5CFF72E835A3B00BD6624 /* ePleadingsMVPApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50A5CFF52E835A3B00BD6624 /* ePleadingsMVPApp.swift */; };
 /* End PBXBuildFile section */
 
@@ -35,6 +39,10 @@
 		500DC01B2E874EDA0004E43E /* CaseDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaseDetailView.swift; sourceTree = "<group>"; };
 		504074CC2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = ePleadingsMVP.xcdatamodel; sourceTree = "<group>"; };
 		504074E22E84AB3400E08A27 /* pleadingsShort.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = pleadingsShort.pdf; sourceTree = "<group>"; };
+		507F6C5D2E88C36600614823 /* HeadingEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HeadingEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
+		507F6C5E2E88C36600614823 /* HeadingEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HeadingEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
+		507F6C652E88C45800614823 /* SentenceEntity+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SentenceEntity+CoreDataClass.swift"; sourceTree = "<group>"; };
+		507F6C662E88C45800614823 /* SentenceEntity+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SentenceEntity+CoreDataProperties.swift"; sourceTree = "<group>"; };
 		5086B3332E82DD3300F80D9E /* ePleadingsMVP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ePleadingsMVP.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5086B3412E82DD3400F80D9E /* ePleadingsMVPTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ePleadingsMVPTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5086B34B2E82DD3400F80D9E /* ePleadingsMVPUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ePleadingsMVPUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -109,6 +117,10 @@
 		5086B32A2E82DD3300F80D9E = {
 			isa = PBXGroup;
 			children = (
+				507F6C652E88C45800614823 /* SentenceEntity+CoreDataClass.swift */,
+				507F6C662E88C45800614823 /* SentenceEntity+CoreDataProperties.swift */,
+				507F6C5D2E88C36600614823 /* HeadingEntity+CoreDataClass.swift */,
+				507F6C5E2E88C36600614823 /* HeadingEntity+CoreDataProperties.swift */,
 				506B44822E8688BD00C7F2F5 /* Panels */,
 				504074EA2E85F90800E08A27 /* FileHelper */,
 				504074E22E84AB3400E08A27 /* pleadingsShort.pdf */,
@@ -292,6 +304,10 @@
 				500DC0232E874EDA0004E43E /* CaseDetailView.swift in Sources */,
 				504074CD2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodeld in Sources */,
 				50A5CFF72E835A3B00BD6624 /* ePleadingsMVPApp.swift in Sources */,
+				507F6C672E88C45800614823 /* SentenceEntity+CoreDataClass.swift in Sources */,
+				507F6C682E88C45800614823 /* SentenceEntity+CoreDataProperties.swift in Sources */,
+				507F6C612E88C36600614823 /* HeadingEntity+CoreDataClass.swift in Sources */,
+				507F6C642E88C36600614823 /* HeadingEntity+CoreDataProperties.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

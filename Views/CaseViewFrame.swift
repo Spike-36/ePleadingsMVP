@@ -59,9 +59,9 @@ struct CaseViewFrame: View {
             ToolbarItem(placement: .automatic) {
                 Button("Debug DB") {
                     let persistence = PersistenceController.shared
-                    persistence.debugPrintSentences(limit: 20)
-                    // (Optional) add a similar call for headings later
-                    // persistence.debugPrintHeadings(limit: 20)
+                    persistence.debugPrintSentences(limit: 20)   // ✅ show sentences
+                    persistence.debugPrintHeadings(limit: 20)    // ✅ show headings
+                    persistence.runRelationshipTest()            // ✅ check relationships
                 }
             }
         }

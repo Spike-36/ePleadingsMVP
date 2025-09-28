@@ -39,14 +39,15 @@ struct CaseViewFrame: View {
                 case .issues:
                     Text("Sidebar: Issues")
                 case .pleadings:
-                    Text("Sidebar: Pleadings")
+                    // ✅ Safe unwrap with fallback
+                    PleadingsNavPanel(sourceFilename: caseInfo.sourceFilename ?? "unknown.docx")
                 }
             } detail: {
                 switch mode {
                 case .issues:
                     Text("Main View: Issues")
                 case .pleadings:
-                    PleadingsPanel(caseInfo: caseInfo)   // ✅ swapped in
+                    PleadingsPanel(caseInfo: caseInfo)   // ✅ already swapped in
                 }
             }
         }

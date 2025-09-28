@@ -5,28 +5,34 @@
 
 import CoreData
 
-struct PersistenceController {
+final class PersistenceController {
     static let shared = PersistenceController()
 
     let container: NSPersistentContainer
 
-    init(inMemory: Bool = false) {
+    private init(inMemory: Bool = false) {
         container = NSPersistentContainer(name: "ePleadingsMVP") // must match .xcdatamodeld
         if inMemory {
             container.persistentStoreDescriptions.first?.url = URL(fileURLWithPath: "/dev/null")
         }
+
         container.loadPersistentStores { _, error in
             if let error = error as NSError? {
                 fatalError("❌ Unresolved Core Data error \(error), \(error.userInfo)")
             }
+
+            // 🔍 Debug: confirm entities that Core Data has loaded
+            for entity in self.container.managedObjectModel.entities {
+                print("📦 Loaded entity: \(entity.name ?? "nil")")
+            }
         }
+
         container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
     }
 }
 
 // MARK: - Helpers
 extension PersistenceController {
-    /// Saves a dummy test heading + sentence into Core Data
     func saveTestSentence() {
         let context = container.viewContext
 
@@ -42,7 +48,7 @@ extension PersistenceController {
         sentence.text = "This is a test paragraph linked to the dummy heading."
         sentence.pageNumber = 1
         sentence.sourceFilename = "Dummy.docx"
-        sentence.heading = heading   // ✅ correct relationship
+        sentence.heading = heading
 
         do {
             try context.save()
@@ -52,7 +58,6 @@ extension PersistenceController {
         }
     }
 
-    /// Debug: print sentences currently stored in Core Data
     func debugPrintSentences(limit: Int? = nil) {
         let context = container.viewContext
         let fetchRequest: NSFetchRequest<SentenceEntity> = SentenceEntity.fetchRequest()
@@ -78,7 +83,6 @@ extension PersistenceController {
         }
     }
 
-    /// Debug: print headings currently stored in Core Data
     func debugPrintHeadings(limit: Int? = nil) {
         let context = container.viewContext
         let fetchRequest: NSFetchRequest<HeadingEntity> = HeadingEntity.fetchRequest()
@@ -105,11 +109,9 @@ extension PersistenceController {
         }
     }
 
-    // MARK: - Relationship Test
     func runRelationshipTest() {
         let context = container.viewContext
 
-        // 1. Create a dummy heading
         let heading = HeadingEntity(context: context)
         heading.id = UUID()
         heading.text = "RELATIONSHIP TEST HEADING"
@@ -117,14 +119,13 @@ extension PersistenceController {
         heading.pageNumber = 1
         heading.sourceFilename = "Test.docx"
 
-        // 2. Create multiple sentences and attach them
         for i in 1...3 {
             let sentence = SentenceEntity(context: context)
             sentence.id = UUID()
             sentence.text = "Sentence \(i) for relationship test"
             sentence.pageNumber = Int32(i)
             sentence.sourceFilename = "Test.docx"
-            sentence.heading = heading   // ✅ attach sentence → heading
+            sentence.heading = heading
         }
 
         do {
@@ -134,12 +135,10 @@ extension PersistenceController {
             print("❌ Failed to save relationship test data: \(error)")
         }
 
-        // 3. Verify heading → sentences
         if let sentences = heading.sentences as? Set<SentenceEntity> {
             print("🔎 Heading '\(heading.text ?? "")' has \(sentences.count) sentences")
         }
 
-        // 4. Verify each sentence → heading
         let fetch: NSFetchRequest<SentenceEntity> = SentenceEntity.fetchRequest()
         if let results = try? context.fetch(fetch) {
             for s in results {

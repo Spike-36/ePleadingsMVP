@@ -12,6 +12,21 @@ struct CaseInfo: Identifiable, Hashable {
     let name: String
     let displayName: String
     let url: URL
+
+    /// Returns the first .docx filename in this case folder (if any)
+    var sourceFilename: String? {
+        let fm = FileManager.default
+        if let items = try? fm.contentsOfDirectory(
+            at: url,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) {
+            if let docx = items.first(where: { $0.pathExtension.lowercased() == "docx" }) {
+                return docx.lastPathComponent
+            }
+        }
+        return nil
+    }
 }
 
 /// File presence helpers used by StartupView status icons.

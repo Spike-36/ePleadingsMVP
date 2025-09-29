@@ -18,7 +18,7 @@ struct PleadingsNavPanel: View {
     
     init(sourceFilename: String, selectedPage: Binding<Int?>) {
         self.sourceFilename = sourceFilename
-        self._selectedPage = selectedPage   // 👉 Stage 4.1
+        self._selectedPage = selectedPage
         _headings = FetchRequest(
             entity: HeadingEntity.entity(),
             sortDescriptors: [
@@ -56,26 +56,27 @@ struct PleadingsNavPanel: View {
                                             text.localizedCaseInsensitiveContains("condescendence") ||
                                             text.localizedCaseInsensitiveContains("statement") ||
                                             text.localizedCaseInsensitiveContains("stat.") {
+                                            
                                             // Main Cond. heading
                                             Button(action: {
-                                                // 🔄 Stage 4.1: set selectedPage
-                                                if let page = heading.pageNumber as? Int {
-                                                    selectedPage = page
-                                                }
+                                                let page = Int(heading.pageNumber)
+                                                selectedPage = page
+                                                print("➡️ NavPanel tapped, page =", page)
                                             }) {
                                                 Text(text)
                                                     .font(.body.bold())
                                                     .padding(.vertical, 2)
                                             }
                                             .buttonStyle(.plain)
+                                            
                                         } else if text.localizedCaseInsensitiveContains("ans.") ||
                                                     text.localizedCaseInsensitiveContains("answer") {
+                                            
                                             // Indented Answer
                                             Button(action: {
-                                                // 🔄 Stage 4.1: set selectedPage
-                                                if let page = heading.pageNumber as? Int {
-                                                    selectedPage = page
-                                                }
+                                                let page = Int(heading.pageNumber)
+                                                selectedPage = page
+                                                print("➡️ NavPanel tapped, page =", page)
                                             }) {
                                                 HStack {
                                                     Spacer().frame(width: 20)

@@ -15,7 +15,7 @@ enum CaseViewMode: String, CaseIterable, Identifiable {
 }
 
 struct CaseViewFrame: View {
-    let caseInfo: CaseInfo   // ✅ now accepts the case being passed in
+    let caseInfo: CaseInfo   // ✅ accepts the case being passed in
     
     @State private var mode: CaseViewMode = .pleadings
     @State private var selectedPage: Int? = nil   // 👉 shared state
@@ -60,7 +60,13 @@ struct CaseViewFrame: View {
                 }
             }
         }
-        .navigationTitle(caseInfo.displayName)  // ✅ show the case name here
+        // 👉 Stage 4.2: log only (no state mutation)
+        .onChange(of: selectedPage) { newPage in
+            if let page = newPage {
+                print("✅ CaseViewFrame observed selectedPage change →", page)
+            }
+        }
+        .navigationTitle(caseInfo.displayName)
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 Button("Back") { dismiss() }
@@ -69,9 +75,9 @@ struct CaseViewFrame: View {
             ToolbarItem(placement: .automatic) {
                 Button("Debug DB") {
                     let persistence = PersistenceController.shared
-                    persistence.debugPrintSentences(limit: 20)   // ✅ show sentences
-                    persistence.debugPrintHeadings(limit: 20)    // ✅ show headings
-                    persistence.runRelationshipTest()            // ✅ check relationships
+                    persistence.debugPrintSentences(limit: 20)
+                    persistence.debugPrintHeadings(limit: 20)
+                    persistence.runRelationshipTest()
                 }
             }
         }

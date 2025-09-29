@@ -17,7 +17,9 @@ enum CaseViewMode: String, CaseIterable, Identifiable {
 struct CaseViewFrame: View {
     let caseInfo: CaseInfo   // ✅ now accepts the case being passed in
     
-    @State private var mode: CaseViewMode = .issues
+    @State private var mode: CaseViewMode = .pleadings
+    @State private var selectedPage: Int? = nil   // 👉 shared state
+    
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -39,15 +41,22 @@ struct CaseViewFrame: View {
                 case .issues:
                     Text("Sidebar: Issues")
                 case .pleadings:
-                    // ✅ Safe unwrap with fallback
-                    PleadingsNavPanel(sourceFilename: caseInfo.sourceFilename ?? "unknown.docx")
+                    // ✅ Pass binding into PleadingsNavPanel
+                    PleadingsNavPanel(
+                        sourceFilename: caseInfo.sourceFilename ?? "unknown.docx",
+                        selectedPage: $selectedPage
+                    )
                 }
             } detail: {
                 switch mode {
                 case .issues:
                     Text("Main View: Issues")
                 case .pleadings:
-                    PleadingsPanel(caseInfo: caseInfo)   // ✅ already swapped in
+                    // ✅ Pass plain value into PleadingsPanel
+                    PleadingsPanel(
+                        caseInfo: caseInfo,
+                        selectedPage: selectedPage
+                    )
                 }
             }
         }

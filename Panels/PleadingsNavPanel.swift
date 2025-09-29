@@ -12,11 +12,13 @@ struct PleadingsNavPanel: View {
     @Environment(\.managedObjectContext) private var viewContext
     
     var sourceFilename: String
+    @Binding var selectedPage: Int?   // 👉 Stage 4.1: binding
     
     @FetchRequest private var headings: FetchedResults<HeadingEntity>
     
-    init(sourceFilename: String) {
+    init(sourceFilename: String, selectedPage: Binding<Int?>) {
         self.sourceFilename = sourceFilename
+        self._selectedPage = selectedPage   // 👉 Stage 4.1
         _headings = FetchRequest(
             entity: HeadingEntity.entity(),
             sortDescriptors: [
@@ -56,7 +58,10 @@ struct PleadingsNavPanel: View {
                                             text.localizedCaseInsensitiveContains("stat.") {
                                             // Main Cond. heading
                                             Button(action: {
-                                                // 👉 Placeholder – hook into PDF scroll later
+                                                // 🔄 Stage 4.1: set selectedPage
+                                                if let page = heading.pageNumber as? Int {
+                                                    selectedPage = page
+                                                }
                                             }) {
                                                 Text(text)
                                                     .font(.body.bold())
@@ -67,7 +72,10 @@ struct PleadingsNavPanel: View {
                                                     text.localizedCaseInsensitiveContains("answer") {
                                             // Indented Answer
                                             Button(action: {
-                                                // 👉 Placeholder – hook into PDF scroll later
+                                                // 🔄 Stage 4.1: set selectedPage
+                                                if let page = heading.pageNumber as? Int {
+                                                    selectedPage = page
+                                                }
                                             }) {
                                                 HStack {
                                                     Spacer().frame(width: 20)

@@ -8,15 +8,15 @@ import PDFKit
 
 struct PleadingsPanel: View {
     let caseInfo: CaseInfo   // 👈 tells us which case folder to use
-    let selectedPage: Int?   // 👉 Stage 4.1: accept selectedPage
-    
+    @Binding var selectedPage: Int?   // ✅ must be Binding so it can sync with parent
+
     @State private var pdfURL: URL? = nil
 
     var body: some View {
         VStack {
             if let url = pdfURL {
-                PDFViewRepresentable(fileURL: url, targetPage: 0)
-                // 🔄 Stage 4.2 will switch to using selectedPage instead of 0
+                // ✅ Fixed call: correct labels + pass Binding
+                PDFViewRepresentable(url: url, selectedPage: $selectedPage)
             } else {
                 Text("No pleadings PDF found for this case.")
                     .foregroundColor(.secondary)
@@ -26,7 +26,6 @@ struct PleadingsPanel: View {
             loadPleadings()
         }
         .onChange(of: selectedPage) { newValue in
-            // 🔄 Stage 4.1: just log it for now
             if let page = newValue {
                 print("👉 PleadingsPanel received selectedPage = \(page)")
             } else {
@@ -39,7 +38,6 @@ struct PleadingsPanel: View {
         let fm = FileManager.default
         let caseFolder = caseInfo.url
 
-        // Preferred PDF name
         let preferredPDF = caseFolder.appendingPathComponent("pleadings.pdf")
         if fm.fileExists(atPath: preferredPDF.path) {
             pdfURL = preferredPDF

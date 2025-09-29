@@ -3,6 +3,7 @@
     <entity name="HeadingEntity" representedClassName="ePleadingsMVP.HeadingEntity" syncable="YES">
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="level" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="mappedPageNumber" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="pageNumber" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="sourceFilename" optional="YES" attributeType="String"/>
         <attribute name="text" optional="YES" attributeType="String"/>

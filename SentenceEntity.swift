@@ -16,7 +16,7 @@ public class SentenceEntity: NSManagedObject {
     }
 
     // MARK: - Attributes
-    @NSManaged public var id: UUID
+    @NSManaged public var id: UUID?   // 🔄 made optional for Core Data consistency
     @NSManaged public var pageNumber: Int32
     @NSManaged public var sourceFilename: String?
     @NSManaged public var text: String

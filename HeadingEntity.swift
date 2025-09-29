@@ -4,12 +4,6 @@
 //
 //  Created by Peter Milligan on 28/09/2025.
 //
-//
-//  HeadingEntity.swift
-//  ePleadingsMVP
-//
-//  Created by Peter Milligan on 28/09/2025.
-//
 
 import Foundation
 import CoreData
@@ -27,6 +21,9 @@ public class HeadingEntity: NSManagedObject {
     @NSManaged public var level: Int16
     @NSManaged public var pageNumber: Int32
     @NSManaged public var sourceFilename: String?
+
+    // 👉 New field for PDF page mapping
+    @NSManaged public var mappedPageNumber: Int32
 
     // MARK: - Relationships
     @NSManaged public var sentences: NSSet?

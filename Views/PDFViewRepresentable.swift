@@ -2,42 +2,31 @@
 //  PDFViewRepresentable.swift
 //  ePleadingsMVP
 //
+//  Created by Peter Milligan on 26/09/2025.
+//
 
 import SwiftUI
 import PDFKit
 
+/// A SwiftUI wrapper around PDFKit’s PDFView (macOS version)
 struct PDFViewRepresentable: NSViewRepresentable {
-    let fileURL: URL
-    let targetPage: Int?   // optional so 0 doesn’t mean “page 1”
+    let url: URL
+    @Binding var selectedPage: Int?
 
     func makeNSView(context: Context) -> PDFView {
         let pdfView = PDFView()
         pdfView.autoScales = true
         pdfView.displayMode = .singlePageContinuous
         pdfView.displayDirection = .vertical
-
-        if let doc = PDFDocument(url: fileURL) {
-            pdfView.document = doc
-        } else {
-            print("⚠️ Could not load PDF at \(fileURL.path)")
-        }
-
+        pdfView.document = PDFDocument(url: url)
         return pdfView
     }
 
-    func updateNSView(_ nsView: PDFView, context: Context) {
-        guard
-            let targetPage,
-            let doc = nsView.document,
-            targetPage > 0,
-            targetPage <= doc.pageCount,
-            let page = doc.page(at: targetPage - 1)
-        else {
-            return
+    func updateNSView(_ pdfView: PDFView, context: Context) {
+        if let pageIndex = selectedPage,
+           let page = pdfView.document?.page(at: pageIndex) {
+            pdfView.go(to: page)
         }
-
-        // Jump to the requested page
-        nsView.go(to: page)
     }
 }
 

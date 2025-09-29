@@ -83,6 +83,7 @@ extension PersistenceController {
         }
     }
 
+    // 🔄 Stage 4.x: clearer heading debug output
     func debugPrintHeadings(limit: Int? = nil) {
         let context = container.viewContext
         let fetchRequest: NSFetchRequest<HeadingEntity> = HeadingEntity.fetchRequest()
@@ -98,7 +99,9 @@ extension PersistenceController {
                 let source = h.sourceFilename ?? "unknown"
                 let level = h.level
                 let sentenceCount = h.sentences?.count ?? 0
-                print("(\(index + 1)) ➡️ \(text) (level \(level), page \(page), source: \(source), sentences: \(sentenceCount))")
+
+                // 👉 Show page + source together for easier debugging
+                print("(\(index + 1)) ➡️ \(text) [level \(level)] — page: \(page) @ \(source) — sentences: \(sentenceCount)")
             }
 
             if let limit = limit, results.count > limit {

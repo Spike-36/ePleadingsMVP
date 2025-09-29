@@ -12,7 +12,9 @@ struct CaseDetailView: View {
     
     @Environment(\.managedObjectContext) private var context
     @StateObject private var viewModel: CaseViewModel
-    @State private var selectedSentenceID: String? = nil   // 👈 now matches SentenceItem.id
+    @State private var selectedSentenceID: String? = nil   // 👈 matches SentenceItem.id
+    @State private var selectedPage: Int? = nil            // 👈 new binding for PDFView
+    
     @StateObject private var importService = ImportService()
     
     // ✅ Single init – always use environment context
@@ -59,10 +61,19 @@ struct CaseDetailView: View {
             if let id = selectedSentenceID,
                let sentence = viewModel.sentences.first(where: { $0.id == id }),
                let url = sentence.resolvedURL(in: caseInfo.url) {
+                
+                // ✅ keep selectedPage in sync with selected sentence
                 PDFViewRepresentable(
-                    fileURL: url,
-                    targetPage: sentence.pageNumber
+                    url: url,
+                    selectedPage: Binding(
+                        get: { selectedPage ?? sentence.pageNumber },
+                        set: { selectedPage = $0 }
+                    )
                 )
+                .onAppear {
+                    selectedPage = sentence.pageNumber
+                }
+                
             } else {
                 Text("Select a sentence to view its source PDF")
                     .foregroundColor(.secondary)

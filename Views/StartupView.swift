@@ -181,7 +181,7 @@ extension StartupView {
     @ViewBuilder
     private func frameDestination() -> some View {
         if let caseInfo = frameTarget {
-            CaseViewFrame(caseInfo: caseInfo)
+            CaseViewFrame(caseInfo: caseInfo)   // ✅ use correct one
         }
     }
 }

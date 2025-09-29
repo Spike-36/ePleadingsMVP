@@ -7,24 +7,26 @@
 
 import SwiftUI
 
+// ✅ CaseViewMode enum (only once)
 enum CaseViewMode: String, CaseIterable, Identifiable {
     case issues = "Issues"
     case pleadings = "Pleadings"
-    
+
     var id: String { rawValue }
 }
 
+// ✅ CaseViewFrame struct (only once)
 struct CaseViewFrame: View {
-    let caseInfo: CaseInfo   // ✅ accepts the case being passed in
+    let caseInfo: CaseInfo   // accepts the case being passed in
     
     @State private var mode: CaseViewMode = .pleadings
-    @State private var selectedPage: Int? = nil   // 👉 shared state
+    @State private var selectedPage: Int? = nil   // shared state
     
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         VStack {
-            // Dropdown picker
+            // Picker to switch modes
             Picker("View", selection: $mode) {
                 ForEach(CaseViewMode.allCases) { m in
                     Text(m.rawValue).tag(m)
@@ -35,16 +37,15 @@ struct CaseViewFrame: View {
             
             Divider()
             
-            // Sidebar + main view skeleton
+            // SplitView with sidebar + detail
             NavigationSplitView {
                 switch mode {
                 case .issues:
                     Text("Sidebar: Issues")
                 case .pleadings:
-                    // ✅ Pass binding into PleadingsNavPanel
                     PleadingsNavPanel(
                         sourceFilename: caseInfo.sourceFilename ?? "unknown.docx",
-                        selectedPage: $selectedPage
+                        selectedPage: $selectedPage   // ✅ binding passed here
                     )
                 }
             } detail: {
@@ -52,15 +53,14 @@ struct CaseViewFrame: View {
                 case .issues:
                     Text("Main View: Issues")
                 case .pleadings:
-                    // ✅ Pass plain value into PleadingsPanel
                     PleadingsPanel(
                         caseInfo: caseInfo,
-                        selectedPage: selectedPage
+                        selectedPage: $selectedPage   // ✅ binding passed here
                     )
                 }
             }
         }
-        // 👉 Stage 4.2: log only (no state mutation)
+        // Debug print when selectedPage changes
         .onChange(of: selectedPage) { newPage in
             if let page = newPage {
                 print("✅ CaseViewFrame observed selectedPage change →", page)

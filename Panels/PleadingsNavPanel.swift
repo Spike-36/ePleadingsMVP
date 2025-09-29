@@ -22,7 +22,8 @@ struct PleadingsNavPanel: View {
         _headings = FetchRequest(
             entity: HeadingEntity.entity(),
             sortDescriptors: [
-                NSSortDescriptor(keyPath: \HeadingEntity.pageNumber, ascending: true),
+                // 🔄 Use mappedPageNumber instead of raw pageNumber
+                NSSortDescriptor(keyPath: \HeadingEntity.mappedPageNumber, ascending: true),
                 NSSortDescriptor(keyPath: \HeadingEntity.text, ascending: true)
             ],
             predicate: NSPredicate(format: "sourceFilename == %@", sourceFilename)
@@ -52,6 +53,7 @@ struct PleadingsNavPanel: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 ForEach(group, id: \.objectID) { heading in
                                     if let text = heading.text {
+                                        
                                         if text.localizedCaseInsensitiveContains("cond.") ||
                                             text.localizedCaseInsensitiveContains("condescendence") ||
                                             text.localizedCaseInsensitiveContains("statement") ||
@@ -59,9 +61,13 @@ struct PleadingsNavPanel: View {
                                             
                                             // Main Cond. heading
                                             Button(action: {
-                                                let page = Int(heading.pageNumber)
-                                                selectedPage = page
-                                                print("➡️ NavPanel tapped, page =", page)
+                                                let mapped = heading.mappedPageNumber
+                                                if mapped > 0 {
+                                                    selectedPage = Int(mapped)
+                                                    print("➡️ NavPanel tapped, mappedPageNumber =", mapped)
+                                                } else {
+                                                    print("⚠️ No mappedPageNumber for heading:", text)
+                                                }
                                             }) {
                                                 Text(text)
                                                     .font(.body.bold())
@@ -74,9 +80,13 @@ struct PleadingsNavPanel: View {
                                             
                                             // Indented Answer
                                             Button(action: {
-                                                let page = Int(heading.pageNumber)
-                                                selectedPage = page
-                                                print("➡️ NavPanel tapped, page =", page)
+                                                let mapped = heading.mappedPageNumber
+                                                if mapped > 0 {
+                                                    selectedPage = Int(mapped)
+                                                    print("➡️ NavPanel tapped, mappedPageNumber =", mapped)
+                                                } else {
+                                                    print("⚠️ No mappedPageNumber for heading:", text)
+                                                }
                                             }) {
                                                 HStack {
                                                     Spacer().frame(width: 20)

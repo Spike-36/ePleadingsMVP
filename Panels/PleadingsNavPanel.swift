@@ -34,7 +34,6 @@ struct PleadingsNavPanel: View {
                 .padding(.bottom, 4)
             
             if headings.isEmpty {
-                // ✅ Show nicer message if we’re in the fallback case
                 if sourceFilename == "unknown.docx" {
                     Text("No pleadings document found for this case")
                         .foregroundColor(.secondary)
@@ -46,17 +45,66 @@ struct PleadingsNavPanel: View {
                 }
             } else {
                 List {
-                    ForEach(headings, id: \.objectID) { heading in
-                        Text(heading.text ?? "")
-                            .lineLimit(1)
-                            .font(.body)
-                            .padding(.vertical, 2)
+                    ForEach(Array(groupedHeadings().enumerated()), id: \.offset) { _, group in
+                        Section {
+                            ForEach(group, id: \.objectID) { heading in
+                                if let text = heading.text {
+                                    if text.localizedCaseInsensitiveContains("cond.") ||
+                                        text.localizedCaseInsensitiveContains("condescendence") ||
+                                        text.localizedCaseInsensitiveContains("statement") ||
+                                        text.localizedCaseInsensitiveContains("stat.") {
+                                        // Main Cond. heading
+                                        Text(text)
+                                            .font(.body.bold())
+                                            .padding(.vertical, 2)
+                                    } else if text.localizedCaseInsensitiveContains("ans.") ||
+                                                text.localizedCaseInsensitiveContains("answer") {
+                                        // Indented Answer
+                                        HStack {
+                                            Spacer().frame(width: 20)
+                                            Text(text)
+                                                .font(.body)
+                                                .padding(.vertical, 2)
+                                        }
+                                    }
+                                }
+                            }
+                        } footer: {
+                            // Add gap after each Cond./Ans. group
+                            Color.clear.frame(height: 8)
+                        }
                     }
                 }
                 .listStyle(PlainListStyle())
             }
         }
         .padding()
+    }
+    
+    // Group into blocks: each Cond. with following Ans.
+    private func groupedHeadings() -> [[HeadingEntity]] {
+        var groups: [[HeadingEntity]] = []
+        var currentGroup: [HeadingEntity] = []
+        
+        for heading in headings {
+            if let text = heading.text {
+                if text.localizedCaseInsensitiveContains("cond.") ||
+                    text.localizedCaseInsensitiveContains("condescendence") ||
+                    text.localizedCaseInsensitiveContains("statement") ||
+                    text.localizedCaseInsensitiveContains("stat.") {
+                    // Start a new group when we hit a Cond.
+                    if !currentGroup.isEmpty {
+                        groups.append(currentGroup)
+                        currentGroup = []
+                    }
+                }
+                currentGroup.append(heading)
+            }
+        }
+        if !currentGroup.isEmpty {
+            groups.append(currentGroup)
+        }
+        return groups
     }
 }
 

@@ -4,12 +4,7 @@
 //
 //  Created by Peter Milligan on 29/09/2025.
 //
-//
-//  HeadingClassifier.swift
-//  ePleadingsMVP
-//
-//  Created by Peter Milligan on 28/09/2025.
-//
+
 import Foundation
 
 enum PleadingHeadingType {
@@ -19,22 +14,38 @@ enum PleadingHeadingType {
 }
 
 struct HeadingClassifier {
-    // 👇 You just add to these arrays as you discover more patterns
-    private static let statementMarkers = ["Cond.", "Condition", "Stat.", "Statement"]
-    private static let answerMarkers = ["Ans.", "Answer"]
-    
+    // Regular expressions for common heading patterns
+    private static let statementPattern = #"^(Cond\.?|Condescendence|Statement|Stat\.?)\s*\d+"#
+    private static let answerPattern = #"^(Ans\.?|Answer)\s*\d+"#
+
+    /// Classify a block of text as statement/answer/misc
     static func classify(_ text: String) -> PleadingHeadingType {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        if statementMarkers.contains(where: { trimmed.hasPrefix($0) }) {
+
+        if trimmed.range(of: statementPattern, options: [.regularExpression, .caseInsensitive]) != nil {
             return .statement
         }
-        
-        if answerMarkers.contains(where: { trimmed.hasPrefix($0) }) {
+
+        if trimmed.range(of: answerPattern, options: [.regularExpression, .caseInsensitive]) != nil {
             return .answer
         }
-        
+
         return .misc
+    }
+
+    /// Extracts the actual short heading string (e.g. "Cond. 1", "Ans. 3") if present.
+    static func extractLabel(_ text: String) -> String? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if let match = trimmed.range(of: statementPattern, options: [.regularExpression, .caseInsensitive]) {
+            return String(trimmed[match])
+        }
+
+        if let match = trimmed.range(of: answerPattern, options: [.regularExpression, .caseInsensitive]) {
+            return String(trimmed[match])
+        }
+
+        return nil
     }
 }
 

@@ -14,10 +14,9 @@ import CoreData
 final class ImportService: ObservableObject {
     @Published var importedFiles: [CaseFile] = []
 
-    // Existing async/published import (used by other screens)
+    // Async/published import (used by other screens)
     func importFile(into caseName: String = "DefaultCase") {
         if let result = importFileAndReturn(into: caseName) {
-            // Keep published array in sync for any views that use it
             if let idx = importedFiles.firstIndex(where: { $0.caseName == result.caseName }) {
                 importedFiles[idx] = result
             } else {
@@ -41,20 +40,13 @@ final class ImportService: ObservableObject {
 
         let safeName = FileHelper.safeName(from: caseName)
         do {
-            // ✅ Copy into case folder
             let copiedURL = try FileHelper.copyFile(from: pickedURL, toCase: safeName)
-
-            // ✅ Resolve case folder paths
             let folder = try FileHelper.caseFolder(named: safeName)
             let pdf = folder.appendingPathComponent("\(safeName).pdf")
             let docx = folder.appendingPathComponent("\(safeName).docx")
 
-            // 🔍 Debug prints for file presence
             print("✅ Saved \(pickedURL.lastPathComponent) → \(copiedURL.lastPathComponent)")
-            print("   PDF exists? \(FileManager.default.fileExists(atPath: pdf.path))")
-            print("   DOCX exists? \(FileManager.default.fileExists(atPath: docx.path))")
 
-            // ✅ If DOCX exists, parse it for paragraphs + save to Core Data
             if FileManager.default.fileExists(atPath: docx.path) {
                 let parser = DocxParser()
                 do {
@@ -64,49 +56,50 @@ final class ImportService: ObservableObject {
                     let context = PersistenceController.shared.container.viewContext
 
                     for (idx, p) in paragraphs.enumerated() {
+                        print("🔍 Paragraph \(idx): \(p.prefix(100))")
+
+                        // Always store sentence
                         let sentence = SentenceEntity(context: context)
                         sentence.id = UUID()
                         sentence.text = p
-                        sentence.pageNumber = Int32(idx + 1) // crude order = “page”
+                        sentence.pageNumber = Int32(idx + 1)
                         sentence.sourceFilename = docx.lastPathComponent
 
-                        // Simple heading flag (all caps heuristic)
-                        if p.uppercased() == p && p.count > 3 {
-                            print("🔖 HEADING detected: \(p)")
+                        // Classify + extract label
+                        let headingType = HeadingClassifier.classify(p)
+                        if headingType != .misc,
+                           let label = HeadingClassifier.extractLabel(p) {
+                            print("🔖 HEADING detected: \(headingType) → \(label)")
 
                             let heading = HeadingEntity(context: context)
                             heading.id = UUID()
-                            heading.text = p
-                            heading.level = 1 // TODO: refine heading levels later
+                            heading.text = label   // ✅ store only clean label, not whole paragraph
+                            heading.level = 1
                             heading.pageNumber = Int32(idx + 1)
                             heading.sourceFilename = docx.lastPathComponent
 
-                            // Optionally link the sentence to the heading
                             sentence.heading = heading
                         }
                     }
 
                     try context.save()
                     print("💾 Saved \(paragraphs.count) sentences into Core Data for case \(safeName)")
-
                 } catch {
                     print("⚠️ Failed to parse DOCX: \(error)")
                 }
             }
 
-            let result = CaseFile(
+            return CaseFile(
                 caseName: safeName,
                 pdfURL: FileManager.default.fileExists(atPath: pdf.path) ? pdf : nil,
                 docxURL: FileManager.default.fileExists(atPath: docx.path) ? docx : nil
             )
-            return result
         } catch {
             print("❌ ImportService failed: \(error)")
             return nil
         }
     }
 
-    /// Load existing files for a case from disk.
     func loadFiles(for caseName: String) {
         do {
             let folder = try FileHelper.caseFolder(named: caseName)

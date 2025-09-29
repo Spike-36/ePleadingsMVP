@@ -44,38 +44,48 @@ struct PleadingsNavPanel: View {
                         .font(.subheadline)
                 }
             } else {
-                List {
-                    ForEach(Array(groupedHeadings().enumerated()), id: \.offset) { _, group in
-                        Section {
-                            ForEach(group, id: \.objectID) { heading in
-                                if let text = heading.text {
-                                    if text.localizedCaseInsensitiveContains("cond.") ||
-                                        text.localizedCaseInsensitiveContains("condescendence") ||
-                                        text.localizedCaseInsensitiveContains("statement") ||
-                                        text.localizedCaseInsensitiveContains("stat.") {
-                                        // Main Cond. heading
-                                        Text(text)
-                                            .font(.body.bold())
-                                            .padding(.vertical, 2)
-                                    } else if text.localizedCaseInsensitiveContains("ans.") ||
-                                                text.localizedCaseInsensitiveContains("answer") {
-                                        // Indented Answer
-                                        HStack {
-                                            Spacer().frame(width: 20)
-                                            Text(text)
-                                                .font(.body)
-                                                .padding(.vertical, 2)
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 8) {
+                        ForEach(Array(groupedHeadings().enumerated()), id: \.offset) { _, group in
+                            VStack(alignment: .leading, spacing: 4) {
+                                ForEach(group, id: \.objectID) { heading in
+                                    if let text = heading.text {
+                                        if text.localizedCaseInsensitiveContains("cond.") ||
+                                            text.localizedCaseInsensitiveContains("condescendence") ||
+                                            text.localizedCaseInsensitiveContains("statement") ||
+                                            text.localizedCaseInsensitiveContains("stat.") {
+                                            // Main Cond. heading
+                                            Button(action: {
+                                                // 👉 Placeholder – hook into PDF scroll later
+                                            }) {
+                                                Text(text)
+                                                    .font(.body.bold())
+                                                    .padding(.vertical, 2)
+                                            }
+                                            .buttonStyle(.plain)
+                                        } else if text.localizedCaseInsensitiveContains("ans.") ||
+                                                    text.localizedCaseInsensitiveContains("answer") {
+                                            // Indented Answer
+                                            Button(action: {
+                                                // 👉 Placeholder – hook into PDF scroll later
+                                            }) {
+                                                HStack {
+                                                    Spacer().frame(width: 20)
+                                                    Text(text)
+                                                        .font(.body)
+                                                        .padding(.vertical, 2)
+                                                }
+                                            }
+                                            .buttonStyle(.plain)
                                         }
                                     }
                                 }
                             }
-                        } footer: {
-                            // Add gap after each Cond./Ans. group
-                            Color.clear.frame(height: 8)
+                            .padding(.bottom, 8) // gap between Cond./Ans. groups
                         }
                     }
+                    .padding(.horizontal, 4)
                 }
-                .listStyle(PlainListStyle())
             }
         }
         .padding()

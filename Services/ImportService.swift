@@ -84,6 +84,13 @@ final class ImportService: ObservableObject {
 
                     try context.save()
                     print("💾 Saved \(paragraphs.count) sentences into Core Data for case \(safeName)")
+
+                    // 👉 After saving, map headings to PDF pages if PDF exists
+                    if FileManager.default.fileExists(atPath: pdf.path) {
+                        let mapper = HeadingToPageMapper(context: context, pdfURL: pdf)
+                        mapper.mapHeadingsToPages()
+                    }
+
                 } catch {
                     print("⚠️ Failed to parse DOCX: \(error)")
                 }

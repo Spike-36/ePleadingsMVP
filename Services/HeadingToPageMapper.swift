@@ -59,8 +59,13 @@ final class HeadingToPageMapper {
             guard let page = pdfDocument.page(at: pageIndex),
                   let content = page.string else { continue }
 
-            // Simple contains check; later can improve with regex for line breaks etc.
-            if content.contains(headingText) {
+            // Case-insensitive match to handle "Answer 4" vs "ANSWER 4"
+            if let _ = content.range(of: headingText, options: [.caseInsensitive]) {
+                // Count matches on this page for logging
+                let matches = content.components(separatedBy: headingText).count - 1
+                if matches > 1 {
+                    print("⚠️ Multiple matches for '\(headingText)' on page \(pageIndex + 1)")
+                }
                 return pageIndex
             }
         }

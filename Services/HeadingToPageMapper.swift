@@ -34,9 +34,16 @@ final class HeadingToPageMapper {
             for heading in headings {
                 guard let text = heading.text else { continue }
 
+                // 🧪 Stage 1 sanity check — confirm new Core Data fields are accessible
+                print("🧪 Bounding box fields for '\(text)' →",
+                      heading.mappedX,
+                      heading.mappedY,
+                      heading.mappedWidth,
+                      heading.mappedHeight)
+
                 if let pageIndex = findPageIndex(for: text) {
                     let pdfPageNumber = pageIndex + 1 // PDFKit is 0-based
-                    
+
                     // 👉 Actually store the mapped page number into Core Data
                     heading.mappedPageNumber = Int32(pdfPageNumber)
 

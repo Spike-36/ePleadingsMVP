@@ -7,6 +7,9 @@
 
 import Foundation
 
+/// Types of headings we recognise in pleadings.
+/// Only `.statement` and `.answer` are treated as anchors in the nav.
+/// `.misc` is everything else.
 enum PleadingHeadingType {
     case statement
     case answer
@@ -14,34 +17,52 @@ enum PleadingHeadingType {
 }
 
 struct HeadingClassifier {
-    // Regular expressions for common heading patterns
-    private static let statementPattern = #"^(Cond\.?|Condescendence|Statement|Stat\.?)\s*\d+"#
-    private static let answerPattern = #"^(Ans\.?|Answer)\s*\d+"#
+    // MARK: - Regex patterns
 
-    /// Classify a block of text as statement/answer/misc
+    /// Matches:
+    /// - "Cond 1", "Cond. 1"
+    /// - "Condescendence 1"
+    /// - "Statement 1"
+    /// - "Stat 1", "Stat. 1"
+    private static let statementPattern =
+        #"^(Cond\.?|Condescendence|Statement|Stat\.?)\s*\d+"#
+
+    /// Matches:
+    /// - "Ans 1", "Ans. 1"
+    /// - "Answer 1"
+    private static let answerPattern =
+        #"^(Ans\.?|Answer)\s*\d+"#
+
+    // MARK: - Classification
+
+    /// Classify a block of text as statement / answer / misc
     static func classify(_ text: String) -> PleadingHeadingType {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        if trimmed.range(of: statementPattern, options: [.regularExpression, .caseInsensitive]) != nil {
+        if trimmed.range(of: statementPattern,
+                         options: [.regularExpression, .caseInsensitive]) != nil {
             return .statement
         }
 
-        if trimmed.range(of: answerPattern, options: [.regularExpression, .caseInsensitive]) != nil {
+        if trimmed.range(of: answerPattern,
+                         options: [.regularExpression, .caseInsensitive]) != nil {
             return .answer
         }
 
         return .misc
     }
 
-    /// Extracts the actual short heading string (e.g. "Cond. 1", "Ans. 3") if present.
+    /// Extract the short heading string (e.g. "Cond. 1", "Ans. 3") if present.
     static func extractLabel(_ text: String) -> String? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        if let match = trimmed.range(of: statementPattern, options: [.regularExpression, .caseInsensitive]) {
+        if let match = trimmed.range(of: statementPattern,
+                                     options: [.regularExpression, .caseInsensitive]) {
             return String(trimmed[match])
         }
 
-        if let match = trimmed.range(of: answerPattern, options: [.regularExpression, .caseInsensitive]) {
+        if let match = trimmed.range(of: answerPattern,
+                                     options: [.regularExpression, .caseInsensitive]) {
             return String(trimmed[match])
         }
 

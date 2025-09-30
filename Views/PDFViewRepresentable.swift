@@ -23,8 +23,10 @@ struct PDFViewRepresentable: NSViewRepresentable {
     }
 
     func updateNSView(_ pdfView: PDFView, context: Context) {
+        // 🔄 Apply 1-based → 0-based fix for Core Data page numbers
         if let pageIndex = selectedPage,
-           let page = pdfView.document?.page(at: pageIndex) {
+           pageIndex > 0,  // ✅ guard against negative indexes
+           let page = pdfView.document?.page(at: pageIndex - 1) {
             pdfView.go(to: page)
         }
     }

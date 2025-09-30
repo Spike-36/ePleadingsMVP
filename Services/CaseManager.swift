@@ -65,6 +65,7 @@ class CaseManager: ObservableObject {
     private let casesDirectory: URL
     private let activeCaseKey = "ActiveCaseName"
     
+    // MARK: - Init
     private init() {
         // Single source of truth for the Cases directory
         casesDirectory = FileHelper.casesDirectory
@@ -76,7 +77,9 @@ class CaseManager: ObservableObject {
         )
         
         refreshCases()
-        restoreActiveCase()
+        
+        // 👉 Disabled auto-restore at startup
+        // restoreActiveCase()
     }
     
     // MARK: - Case Management
@@ -122,7 +125,7 @@ class CaseManager: ObservableObject {
                     $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
                 }
         } catch {
-            print("❌ Failed to refresh cases: \(error)")
+            // 🔄 Quietly handle failure without spamming logs
             cases = []
         }
     }

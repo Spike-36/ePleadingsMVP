@@ -22,8 +22,14 @@ public class HeadingEntity: NSManagedObject {
     @NSManaged public var pageNumber: Int32
     @NSManaged public var sourceFilename: String?
 
-    // 👉 New field for PDF page mapping
+    // 👉 Existing field for PDF page mapping
     @NSManaged public var mappedPageNumber: Int32
+
+    // 👉 New fields for precise bounding box mapping (optional in Core Data)
+    @NSManaged public var mappedX: Double
+    @NSManaged public var mappedY: Double
+    @NSManaged public var mappedWidth: Double
+    @NSManaged public var mappedHeight: Double
 
     // MARK: - Relationships
     @NSManaged public var sentences: NSSet?

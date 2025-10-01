@@ -9,7 +9,7 @@ import Foundation
 import PDFKit
 import CoreData
 
-/// Maps DOCX headings stored in Core Data to actual PDF page numbers.
+/// Maps DOCX headings stored in Core Data to actual PDF page numbers and bounding boxes.
 final class HeadingToPageMapper {
 
     private let context: NSManagedObjectContext
@@ -23,7 +23,7 @@ final class HeadingToPageMapper {
         self.pdfDocument = doc
     }
 
-    /// Run once per case load: try to assign real PDF page numbers to all headings.
+    /// Run once per case load: assign PDF page numbers + bounding boxes to all headings.
     func mapHeadingsToPages() {
         let fetchRequest: NSFetchRequest<HeadingEntity> = HeadingEntity.fetchRequest()
 
@@ -34,46 +34,54 @@ final class HeadingToPageMapper {
             for heading in headings {
                 guard let text = heading.text else { continue }
 
-                // 🧪 Stage 1 sanity check — confirm new Core Data fields are accessible
-                print("🧪 Bounding box fields for '\(text)' →",
-                      heading.mappedX,
-                      heading.mappedY,
-                      heading.mappedWidth,
-                      heading.mappedHeight)
+                if let result = findPageAndBounds(for: text) {
+                    let pdfPageNumber = result.pageIndex + 1 // PDFKit is 0-based
+                    let bounds = result.bounds
 
-                if let pageIndex = findPageIndex(for: text) {
-                    let pdfPageNumber = pageIndex + 1 // PDFKit is 0-based
-
-                    // 👉 Actually store the mapped page number into Core Data
+                    // 👉 Store results into Core Data
                     heading.mappedPageNumber = Int32(pdfPageNumber)
+                    heading.mappedX = bounds.origin.x
+                    heading.mappedY = bounds.origin.y
+                    heading.mappedWidth = bounds.width
+                    heading.mappedHeight = bounds.height
 
-                    print("✅ Mapped heading '\(text)' → PDF page \(pdfPageNumber)")
+                    print("✅ Mapped heading '\(text)' → page \(pdfPageNumber) @ \(bounds)")
                 } else {
                     print("⚠️ No match for heading '\(text)' in PDF")
                 }
             }
 
             try context.save()
-            print("💾 Saved mapped page numbers to Core Data")
+            print("💾 Saved mapped page numbers + bounding boxes to Core Data")
         } catch {
             print("❌ Failed mapping headings: \(error)")
         }
     }
 
-    /// Search the PDF text for the first occurrence of a heading.
-    private func findPageIndex(for headingText: String) -> Int? {
+    /// Find the first PDF page containing `headingText` and return both page index + bounding box.
+    private func findPageAndBounds(for headingText: String) -> (pageIndex: Int, bounds: CGRect)? {
         for pageIndex in 0..<pdfDocument.pageCount {
             guard let page = pdfDocument.page(at: pageIndex),
                   let content = page.string else { continue }
 
-            // Case-insensitive match to handle "Answer 4" vs "ANSWER 4"
-            if let _ = content.range(of: headingText, options: [.caseInsensitive]) {
-                // Count matches on this page for logging
-                let matches = content.components(separatedBy: headingText).count - 1
-                if matches > 1 {
-                    print("⚠️ Multiple matches for '\(headingText)' on page \(pageIndex + 1)")
+            // Case-insensitive match
+            if let range = content.range(of: headingText, options: [.caseInsensitive]) {
+                let nsRange = NSRange(range, in: content)
+
+                if let selection = page.selection(for: nsRange) {
+                    let bounds = selection.bounds(for: page)
+
+                    // Warn if multiple matches on same page
+                    let matches = content.components(separatedBy: headingText).count - 1
+                    if matches > 1 {
+                        print("⚠️ Multiple matches for '\(headingText)' on page \(pageIndex + 1)")
+                    }
+
+                    return (pageIndex, bounds)
+                } else {
+                    // Page contains text but no bounding box
+                    return (pageIndex, .zero)
                 }
-                return pageIndex
             }
         }
         return nil

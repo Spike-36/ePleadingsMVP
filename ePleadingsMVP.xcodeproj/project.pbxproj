@@ -13,6 +13,8 @@
 		504074CD2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 504074CB2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodeld */; };
 		504074D82E83D4A200E08A27 /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 504074D72E83D4A200E08A27 /* ZIPFoundation */; };
 		504074E32E84AB3400E08A27 /* pleadingsShort.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 504074E22E84AB3400E08A27 /* pleadingsShort.pdf */; };
+		508D7B862E8E2D0900597FC7 /* CaseEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 508D7B852E8E2D0500597FC7 /* CaseEntity.swift */; };
+		508D7B882E8E2D2A00597FC7 /* DocumentEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 508D7B872E8E2D1D00597FC7 /* DocumentEntity.swift */; };
 		50A5CFF72E835A3B00BD6624 /* ePleadingsMVPApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50A5CFF52E835A3B00BD6624 /* ePleadingsMVPApp.swift */; };
 /* End PBXBuildFile section */
 
@@ -42,6 +44,8 @@
 		5086B3332E82DD3300F80D9E /* ePleadingsMVP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ePleadingsMVP.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5086B3412E82DD3400F80D9E /* ePleadingsMVPTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ePleadingsMVPTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5086B34B2E82DD3400F80D9E /* ePleadingsMVPUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ePleadingsMVPUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		508D7B852E8E2D0500597FC7 /* CaseEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaseEntity.swift; sourceTree = "<group>"; };
+		508D7B872E8E2D1D00597FC7 /* DocumentEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentEntity.swift; sourceTree = "<group>"; };
 		50A5CFF42E835A3B00BD6624 /* ePleadingsMVP.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ePleadingsMVP.entitlements; sourceTree = "<group>"; };
 		50A5CFF52E835A3B00BD6624 /* ePleadingsMVPApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ePleadingsMVPApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -113,6 +117,8 @@
 		5086B32A2E82DD3300F80D9E = {
 			isa = PBXGroup;
 			children = (
+				508D7B872E8E2D1D00597FC7 /* DocumentEntity.swift */,
+				508D7B852E8E2D0500597FC7 /* CaseEntity.swift */,
 				500018B02E8A1A6400643DED /* HeadingEntity.swift */,
 				500018B12E8A1A6400643DED /* SentenceEntity.swift */,
 				506B44822E8688BD00C7F2F5 /* Panels */,
@@ -298,6 +304,8 @@
 				500DC0232E874EDA0004E43E /* CaseDetailView.swift in Sources */,
 				500018B22E8A1A6400643DED /* SentenceEntity.swift in Sources */,
 				500018B32E8A1A6400643DED /* HeadingEntity.swift in Sources */,
+				508D7B882E8E2D2A00597FC7 /* DocumentEntity.swift in Sources */,
+				508D7B862E8E2D0900597FC7 /* CaseEntity.swift in Sources */,
 				504074CD2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodeld in Sources */,
 				50A5CFF72E835A3B00BD6624 /* ePleadingsMVPApp.swift in Sources */,
 			);

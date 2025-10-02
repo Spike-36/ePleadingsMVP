@@ -16,7 +16,7 @@ public class HeadingEntity: NSManagedObject {
     }
 
     // MARK: - Attributes
-    @NSManaged public var id: UUID?
+    @NSManaged public var id: UUID            // Always set, consistent with Case/Document
     @NSManaged public var text: String?
     @NSManaged public var level: Int16
     @NSManaged public var pageNumber: Int32
@@ -25,13 +25,17 @@ public class HeadingEntity: NSManagedObject {
     // 👉 Existing field for PDF page mapping
     @NSManaged public var mappedPageNumber: Int32
 
-    // 👉 New fields for precise bounding box mapping (optional in Core Data)
+    // 👉 Precise bounding box mapping (optional in Core Data)
     @NSManaged public var mappedX: Double
     @NSManaged public var mappedY: Double
     @NSManaged public var mappedWidth: Double
     @NSManaged public var mappedHeight: Double
 
     // MARK: - Relationships
+    /// Parent document (inverse of DocumentEntity.headings)
+    @NSManaged public var document: DocumentEntity?
+
+    /// Sentences under this heading (inverse of SentenceEntity.heading)
     @NSManaged public var sentences: NSSet?
 }
 

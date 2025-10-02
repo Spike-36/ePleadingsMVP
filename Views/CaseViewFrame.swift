@@ -6,67 +6,54 @@
 //
 
 import SwiftUI
+import CoreData
 
-// ✅ CaseViewMode enum (only once)
-enum CaseViewMode: String, CaseIterable, Identifiable {
-    case issues = "Issues"
-    case pleadings = "Pleadings"
-
-    var id: String { rawValue }
-}
-
-// ✅ CaseViewFrame struct (only once)
 struct CaseViewFrame: View {
-    let caseInfo: CaseInfo   // accepts the case being passed in
+    let caseEntity: CaseEntity   // 👈 Core Data entity
     
-    @State private var mode: CaseViewMode = .pleadings
-    @State private var selectedPage: Int? = nil   // shared state
+    @State private var selectedPage: Int? = nil
     
+    @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
     
+    // 👇 Fetch documents linked to this CaseEntity
+    @FetchRequest private var documents: FetchedResults<DocumentEntity>
+    
+    init(caseEntity: CaseEntity) {
+        self.caseEntity = caseEntity
+        _documents = FetchRequest(
+            entity: DocumentEntity.entity(),
+            sortDescriptors: [NSSortDescriptor(keyPath: \DocumentEntity.filename, ascending: true)],
+            predicate: NSPredicate(format: "case == %@", caseEntity)   // ✅ Core Data key is "case"
+        )
+    }
+    
     var body: some View {
-        VStack {
-            // Picker to switch modes
-            Picker("View", selection: $mode) {
-                ForEach(CaseViewMode.allCases) { m in
-                    Text(m.rawValue).tag(m)
-                }
+        NavigationSplitView {
+            // Sidebar: pleadings navigation
+            if let document = documents.first {
+                PleadingsNavPanel(
+                    document: document,
+                    selectedPage: $selectedPage
+                )
+            } else {
+                Text("No pleadings document found")
+                    .foregroundColor(.secondary)
             }
-            .pickerStyle(.menu)
-            .padding(.horizontal)
-            
-            Divider()
-            
-            // SplitView with sidebar + detail
-            NavigationSplitView {
-                switch mode {
-                case .issues:
-                    Text("Sidebar: Issues")
-                case .pleadings:
-                    PleadingsNavPanel(
-                        sourceFilename: caseInfo.sourceFilename ?? "unknown.docx",
-                        selectedPage: $selectedPage   // ✅ binding passed here
-                    )
-                }
-            } detail: {
-                switch mode {
-                case .issues:
-                    Text("Main View: Issues")
-                case .pleadings:
-                    PleadingsPanel(
-                        caseInfo: caseInfo,
-                        selectedPage: $selectedPage   // ✅ binding passed here
-                    )
-                }
-            }
+        } detail: {
+            // Main panel: pleadings viewer
+            PleadingsPanel(
+                caseEntity: caseEntity,
+                selectedPage: $selectedPage
+            )
         }
-        // Debug print when selectedPage changes
         .onChange(of: selectedPage) { newPage in
             if let page = newPage {
                 print("✅ CaseViewFrame observed selectedPage change →", page)
             }
         }
-        .navigationTitle(caseInfo.displayName)
+        // ✅ direct property access — no more KVC
+        .navigationTitle(caseEntity.filename)
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 Button("Back") { dismiss() }

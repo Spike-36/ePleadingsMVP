@@ -1,32 +1,24 @@
-//
-//  PleadingsNavPanel.swift
-//  ePleadingsMVP
-//
-//  Created by Peter Milligan on 28/09/2025.
-//
-
 import SwiftUI
 import CoreData
 
 struct PleadingsNavPanel: View {
     @Environment(\.managedObjectContext) private var viewContext
     
-    var sourceFilename: String
-    @Binding var selectedPage: Int?   // 👉 Stage 4.1: binding
+    var document: DocumentEntity
+    @Binding var selectedPage: Int?
     
     @FetchRequest private var headings: FetchedResults<HeadingEntity>
     
-    init(sourceFilename: String, selectedPage: Binding<Int?>) {
-        self.sourceFilename = sourceFilename
+    init(document: DocumentEntity, selectedPage: Binding<Int?>) {
+        self.document = document
         self._selectedPage = selectedPage
         _headings = FetchRequest(
             entity: HeadingEntity.entity(),
             sortDescriptors: [
-                // 🔄 Use mappedPageNumber instead of raw pageNumber
                 NSSortDescriptor(keyPath: \HeadingEntity.mappedPageNumber, ascending: true),
                 NSSortDescriptor(keyPath: \HeadingEntity.text, ascending: true)
             ],
-            predicate: NSPredicate(format: "sourceFilename == %@", sourceFilename)
+            predicate: NSPredicate(format: "document == %@", document) // ✅ filter by relationship
         )
     }
     
@@ -37,15 +29,9 @@ struct PleadingsNavPanel: View {
                 .padding(.bottom, 4)
             
             if headings.isEmpty {
-                if sourceFilename == "unknown.docx" {
-                    Text("No pleadings document found for this case")
-                        .foregroundColor(.secondary)
-                        .font(.subheadline)
-                } else {
-                    Text("No headings found in \(sourceFilename)")
-                        .foregroundColor(.secondary)
-                        .font(.subheadline)
-                }
+                Text("No headings found in \(document.filename)") // ✅ no optional unwrap
+                    .foregroundColor(.secondary)
+                    .font(.subheadline)
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 8) {
@@ -53,54 +39,11 @@ struct PleadingsNavPanel: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 ForEach(group, id: \.objectID) { heading in
                                     if let text = heading.text {
-                                        
-                                        if text.localizedCaseInsensitiveContains("cond.") ||
-                                            text.localizedCaseInsensitiveContains("condescendence") ||
-                                            text.localizedCaseInsensitiveContains("statement") ||
-                                            text.localizedCaseInsensitiveContains("stat.") {
-                                            
-                                            // Main Cond. heading
-                                            Button(action: {
-                                                let mapped = heading.mappedPageNumber
-                                                if mapped > 0 {
-                                                    selectedPage = Int(mapped)
-                                                    print("➡️ NavPanel tapped, mappedPageNumber =", mapped)
-                                                } else {
-                                                    print("⚠️ No mappedPageNumber for heading:", text)
-                                                }
-                                            }) {
-                                                Text(text)
-                                                    .font(.body.bold())
-                                                    .padding(.vertical, 2)
-                                            }
-                                            .buttonStyle(.plain)
-                                            
-                                        } else if text.localizedCaseInsensitiveContains("ans.") ||
-                                                    text.localizedCaseInsensitiveContains("answer") {
-                                            
-                                            // Indented Answer
-                                            Button(action: {
-                                                let mapped = heading.mappedPageNumber
-                                                if mapped > 0 {
-                                                    selectedPage = Int(mapped)
-                                                    print("➡️ NavPanel tapped, mappedPageNumber =", mapped)
-                                                } else {
-                                                    print("⚠️ No mappedPageNumber for heading:", text)
-                                                }
-                                            }) {
-                                                HStack {
-                                                    Spacer().frame(width: 20)
-                                                    Text(text)
-                                                        .font(.body)
-                                                        .padding(.vertical, 2)
-                                                }
-                                            }
-                                            .buttonStyle(.plain)
-                                        }
+                                        headingButton(for: heading, text: text)
                                     }
                                 }
                             }
-                            .padding(.bottom, 8) // gap between Cond./Ans. groups
+                            .padding(.bottom, 8)
                         }
                     }
                     .padding(.horizontal, 4)
@@ -110,7 +53,40 @@ struct PleadingsNavPanel: View {
         .padding()
     }
     
-    // Group into blocks: each Cond. with following Ans.
+    @ViewBuilder
+    private func headingButton(for heading: HeadingEntity, text: String) -> some View {
+        let mapped = heading.mappedPageNumber
+        if text.localizedCaseInsensitiveContains("cond.") ||
+            text.localizedCaseInsensitiveContains("condescendence") ||
+            text.localizedCaseInsensitiveContains("statement") ||
+            text.localizedCaseInsensitiveContains("stat.") {
+            
+            Button {
+                if mapped > 0 { selectedPage = Int(mapped) }
+            } label: {
+                Text(text)
+                    .font(.body.bold())
+                    .padding(.vertical, 2)
+            }
+            .buttonStyle(.plain)
+            
+        } else if text.localizedCaseInsensitiveContains("ans.") ||
+                    text.localizedCaseInsensitiveContains("answer") {
+            
+            Button {
+                if mapped > 0 { selectedPage = Int(mapped) }
+            } label: {
+                HStack {
+                    Spacer().frame(width: 20)
+                    Text(text)
+                        .font(.body)
+                        .padding(.vertical, 2)
+                }
+            }
+            .buttonStyle(.plain)
+        }
+    }
+    
     private func groupedHeadings() -> [[HeadingEntity]] {
         var groups: [[HeadingEntity]] = []
         var currentGroup: [HeadingEntity] = []
@@ -121,7 +97,6 @@ struct PleadingsNavPanel: View {
                     text.localizedCaseInsensitiveContains("condescendence") ||
                     text.localizedCaseInsensitiveContains("statement") ||
                     text.localizedCaseInsensitiveContains("stat.") {
-                    // Start a new group when we hit a Cond.
                     if !currentGroup.isEmpty {
                         groups.append(currentGroup)
                         currentGroup = []
@@ -130,9 +105,7 @@ struct PleadingsNavPanel: View {
                 currentGroup.append(heading)
             }
         }
-        if !currentGroup.isEmpty {
-            groups.append(currentGroup)
-        }
+        if !currentGroup.isEmpty { groups.append(currentGroup) }
         return groups
     }
 }

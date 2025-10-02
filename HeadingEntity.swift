@@ -16,16 +16,14 @@ public class HeadingEntity: NSManagedObject {
     }
 
     // MARK: - Attributes
-    @NSManaged public var id: UUID            // Always set, consistent with Case/Document
+    @NSManaged public var id: UUID
     @NSManaged public var text: String?
     @NSManaged public var level: Int16
     @NSManaged public var pageNumber: Int32
     @NSManaged public var sourceFilename: String?
 
-    // 👉 Existing field for PDF page mapping
+    // MARK: - Mapped PDF positioning
     @NSManaged public var mappedPageNumber: Int32
-
-    // 👉 Precise bounding box mapping (optional in Core Data)
     @NSManaged public var mappedX: Double
     @NSManaged public var mappedY: Double
     @NSManaged public var mappedWidth: Double

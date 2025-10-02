@@ -21,8 +21,8 @@ public class DocumentEntity: NSManagedObject {
     @NSManaged public var createdAt: Date
 
     // MARK: - Relationships
-    /// Parent case for this document
-    @NSManaged public var caseRef: CaseEntity?
+    /// Parent case for this document (inverse of CaseEntity.documents)
+    @NSManaged public var caseEntity: CaseEntity?
 
     /// All headings that belong to this document (inverse of HeadingEntity.document)
     @NSManaged public var headings: NSSet?

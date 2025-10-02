@@ -17,11 +17,11 @@ public class CaseEntity: NSManagedObject {
 
     // MARK: - Attributes
     @NSManaged public var id: UUID
-    @NSManaged public var name: String
+    @NSManaged public var filename: String
     @NSManaged public var createdAt: Date
 
     // MARK: - Relationships
-    /// All documents belonging to this case (inverse of DocumentEntity.caseRef)
+    /// All documents belonging to this case (inverse of DocumentEntity.caseEntity)
     @NSManaged public var documents: NSSet?
 }
 

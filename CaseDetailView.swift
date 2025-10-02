@@ -1,4 +1,3 @@
-//
 //  CaseDetailView.swift
 //  ePleadingsMVP
 //
@@ -6,6 +5,8 @@
 import SwiftUI
 import PDFKit
 import CoreData
+
+#if false   // 🔒 Disable CaseDetailView for now (kept for reference)
 
 struct CaseDetailView: View {
     let caseInfo: CaseInfo   // 👈 passed in from StartupView
@@ -94,4 +95,6 @@ struct CaseDetailView: View {
         }
     }
 }
+
+#endif
 

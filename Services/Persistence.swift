@@ -151,3 +151,23 @@ extension PersistenceController {
     }
 }
 
+// MARK: - File storage helpers
+extension PersistenceController {
+    /// Top-level Cases folder inside app's Documents directory
+    var casesFolder: URL {
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let folder = docs.appendingPathComponent("Cases", isDirectory: true)
+
+        if !FileManager.default.fileExists(atPath: folder.path) {
+            do {
+                try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                print("📂 Created Cases folder at: \(folder.path)")
+            } catch {
+                print("⚠️ Failed to create Cases folder: \(error)")
+            }
+        }
+
+        return folder
+    }
+}
+

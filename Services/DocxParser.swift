@@ -40,13 +40,15 @@ class DocxParser: NSObject {
     }
 
     /// Stage 3.2 stub:
-    /// Scan parsed paragraphs for headings like "Statement 1" / "Answer 2"
+    /// Scan parsed paragraphs for headings like "Statement 1" / "Answer 2" / "Cond. 3"
     func parseHeadings(at url: URL) throws -> [String] {
         let paras = try parseDocx(at: url)
 
-        // Regex: heading if starts with Statement N or Answer N
-        let regex = try NSRegularExpression(pattern: "^(Statement|Answer)\\s+\\d+",
-                                            options: [.caseInsensitive])
+        // Regex: heading if starts with Statement/Answer/Cond variants + number (+ trailing text allowed)
+        let regex = try NSRegularExpression(
+            pattern: "^(Statement|Stat\\.?|Answer|Ans\\.?|Condescendence|Cond\\.?)\\s+\\d+\\b.*",
+            options: [.caseInsensitive]
+        )
 
         var found: [String] = []
         for para in paras {

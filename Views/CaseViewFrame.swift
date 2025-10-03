@@ -73,12 +73,43 @@ struct CaseViewFrame: View {
     }
     
     private func runHeadingMapperIfNeeded() {
-        guard let document = documents.first,
-              let path = document.filePath else { return }
+        let docs = Array(documents)
+        guard !docs.isEmpty else { return }
         
-        let pdfURL = URL(fileURLWithPath: path)
-        let mapper = HeadingToPageMapper(context: viewContext, pdfURL: pdfURL)
-        mapper.mapHeadingsToPages()
+        // Prefer a PDF doc
+        let pdfDocEntity = docs.first { ($0.filePath ?? "").lowercased().hasSuffix(".pdf") }
+        let docxDocEntity = docs.first { ($0.filePath ?? "").lowercased().hasSuffix(".docx") }
+        
+        // Resolve actual PDF URL
+        var resolvedPDFURL: URL?
+        if let pdfPath = pdfDocEntity?.filePath {
+            resolvedPDFURL = URL(fileURLWithPath: pdfPath)
+        } else if let docxPath = docxDocEntity?.filePath {
+            let candidate = URL(fileURLWithPath: docxPath)
+                .deletingPathExtension()
+                .appendingPathExtension("pdf")
+            if FileManager.default.fileExists(atPath: candidate.path) {
+                resolvedPDFURL = candidate
+            }
+        }
+        
+        guard let pdfURL = resolvedPDFURL else {
+            print("❌ No PDF available for mapping for case \(caseEntity.filename ?? "<no name>")")
+            return
+        }
+        
+        // Use headings from the DOCX (fallback: headings from the PDF doc entity)
+        let headings: [HeadingEntity] =
+            (docxDocEntity?.headings?.allObjects as? [HeadingEntity]) ??
+            (pdfDocEntity?.headings?.allObjects as? [HeadingEntity]) ??
+            []
+        
+        print("🧭 runHeadingMapperIfNeeded → Using PDF: \(pdfURL.lastPathComponent); headings=\(headings.count)")
+        
+        guard let mapper = HeadingToPageMapper(context: viewContext, pdfURL: pdfURL) else {
+            return
+        }
+        mapper.mapHeadings(headings)
     }
 }
 

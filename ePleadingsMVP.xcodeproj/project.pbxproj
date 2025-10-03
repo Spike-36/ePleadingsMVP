@@ -15,6 +15,7 @@
 		504074E32E84AB3400E08A27 /* pleadingsShort.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 504074E22E84AB3400E08A27 /* pleadingsShort.pdf */; };
 		508D7B862E8E2D0900597FC7 /* CaseEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 508D7B852E8E2D0500597FC7 /* CaseEntity.swift */; };
 		508D7B882E8E2D2A00597FC7 /* DocumentEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 508D7B872E8E2D1D00597FC7 /* DocumentEntity.swift */; };
+		508D7BDE2E8F971E00597FC7 /* Dummy.metal in Resources */ = {isa = PBXBuildFile; fileRef = 508D7BDC2E8F7BE800597FC7 /* Dummy.metal */; };
 		50A5CFF72E835A3B00BD6624 /* ePleadingsMVPApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50A5CFF52E835A3B00BD6624 /* ePleadingsMVPApp.swift */; };
 /* End PBXBuildFile section */
 
@@ -46,6 +47,7 @@
 		5086B34B2E82DD3400F80D9E /* ePleadingsMVPUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ePleadingsMVPUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		508D7B852E8E2D0500597FC7 /* CaseEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaseEntity.swift; sourceTree = "<group>"; };
 		508D7B872E8E2D1D00597FC7 /* DocumentEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentEntity.swift; sourceTree = "<group>"; };
+		508D7BDC2E8F7BE800597FC7 /* Dummy.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Dummy.metal; sourceTree = "<group>"; };
 		50A5CFF42E835A3B00BD6624 /* ePleadingsMVP.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ePleadingsMVP.entitlements; sourceTree = "<group>"; };
 		50A5CFF52E835A3B00BD6624 /* ePleadingsMVPApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ePleadingsMVPApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -130,6 +132,7 @@
 				504074CB2E83C9AE00E08A27 /* ePleadingsMVP.xcdatamodeld */,
 				50A5CFF42E835A3B00BD6624 /* ePleadingsMVP.entitlements */,
 				500DC01B2E874EDA0004E43E /* CaseDetailView.swift */,
+				508D7BDC2E8F7BE800597FC7 /* Dummy.metal */,
 				50A5CFF52E835A3B00BD6624 /* ePleadingsMVPApp.swift */,
 				5086B3442E82DD3400F80D9E /* ePleadingsMVPTests */,
 				5086B34E2E82DD3400F80D9E /* ePleadingsMVPUITests */,
@@ -157,6 +160,7 @@
 				5086B32F2E82DD3300F80D9E /* Sources */,
 				5086B3302E82DD3300F80D9E /* Frameworks */,
 				5086B3312E82DD3300F80D9E /* Resources */,
+				508D7BDF2E8F979B00597FC7 /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -277,6 +281,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				504074E32E84AB3400E08A27 /* pleadingsShort.pdf in Resources */,
+				508D7BDE2E8F971E00597FC7 /* Dummy.metal in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -295,6 +300,26 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		508D7BDF2E8F979B00597FC7 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Go into the built app’s Resources folder\ncd \"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources\"\n\n# Look for any .metallib and rename it to default.metallib\nif ls *.metallib 1> /dev/null 2>&1; then\n  for f in *.metallib; do\n    cp \"$f\" \"default.metallib\"\n    echo \"Copied $f to default.metallib\"\n    break\n  done\nelse\n  echo \"⚠️ No metallib found, skipping.\"\nfi\n\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		5086B32F2E82DD3300F80D9E /* Sources */ = {

@@ -10,13 +10,16 @@ final class PersistenceController {
 
     let container: NSPersistentContainer
 
+    // 👉 Toggle this to true if you want a clean slate every launch
+    private let resetOnLaunch: Bool = true
+
     private init(inMemory: Bool = false) {
         container = NSPersistentContainer(name: "ePleadingsMVP") // must match .xcdatamodeld
         if inMemory {
             container.persistentStoreDescriptions.first?.url = URL(fileURLWithPath: "/dev/null")
         }
 
-        container.loadPersistentStores { _, error in
+        container.loadPersistentStores { storeDescription, error in
             if let error = error as NSError? {
                 fatalError("❌ Unresolved Core Data error \(error), \(error.userInfo)")
             }
@@ -24,6 +27,25 @@ final class PersistenceController {
             // 🔍 Debug: confirm entities that Core Data has loaded
             for entity in self.container.managedObjectModel.entities {
                 print("📦 Loaded entity: \(entity.name ?? "nil")")
+            }
+
+            // 👉 Reset store if flag is set
+            if self.resetOnLaunch {
+                let coordinator = self.container.persistentStoreCoordinator
+                for store in coordinator.persistentStores {
+                    if let url = store.url {
+                        do {
+                            try coordinator.destroyPersistentStore(at: url, ofType: store.type, options: nil)
+                            try coordinator.addPersistentStore(ofType: store.type,
+                                                               configurationName: nil,
+                                                               at: url,
+                                                               options: nil)
+                            print("🧹 Core Data store reset on launch")
+                        } catch {
+                            print("⚠️ Failed to reset store: \(error)")
+                        }
+                    }
+                }
             }
         }
 
@@ -83,7 +105,6 @@ extension PersistenceController {
         }
     }
 
-    // 🔄 Stage 4.x: clearer heading debug output
     func debugPrintHeadings(limit: Int? = nil) {
         let context = container.viewContext
         let fetchRequest: NSFetchRequest<HeadingEntity> = HeadingEntity.fetchRequest()
@@ -100,7 +121,6 @@ extension PersistenceController {
                 let level = h.level
                 let sentenceCount = h.sentences?.count ?? 0
 
-                // 👉 Show page + source together for easier debugging
                 print("(\(index + 1)) ➡️ \(text) [level \(level)] — page: \(page) @ \(source) — sentences: \(sentenceCount)")
             }
 
@@ -153,7 +173,6 @@ extension PersistenceController {
 
 // MARK: - File storage helpers
 extension PersistenceController {
-    /// Top-level Cases folder inside app's Documents directory
     var casesFolder: URL {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         let folder = docs.appendingPathComponent("Cases", isDirectory: true)

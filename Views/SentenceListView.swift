@@ -3,6 +3,8 @@
 //  ePleadingsMVP
 //
 
+#if DISABLED   // 🔒 Preserved for later, excluded from build
+
 import SwiftUI
 import CoreData
 
@@ -85,4 +87,6 @@ struct SentenceListView: View {
         }
     }
 }
+
+#endif
 

@@ -8,8 +8,8 @@ import SwiftUI
 
 /// Represents a single case folder.
 struct CaseInfo: Identifiable, Hashable {
-    let id = UUID()
-    let name: String
+    let id: UUID
+    let name: String       // UUID string (folder name)
     let displayName: String
     let url: URL
 
@@ -30,7 +30,6 @@ struct CaseInfo: Identifiable, Hashable {
 }
 
 /// File presence helpers used by StartupView status icons.
-/// These detect **any** .docx / .pdf file in the case folder.
 extension CaseInfo {
     var hasDocx: Bool {
         let fm = FileManager.default
@@ -63,47 +62,38 @@ class CaseManager: ObservableObject {
     }
     
     private let casesDirectory: URL
-    private let activeCaseKey = "ActiveCaseName"
+    private let activeCaseKey = "ActiveCaseID"
     
-    // MARK: - Init
     private init() {
-        // Single source of truth for the Cases directory
         casesDirectory = FileHelper.casesDirectory
-        
-        // Ensure directory exists (FileHelper already does this, but harmless)
-        try? FileManager.default.createDirectory(
-            at: casesDirectory,
-            withIntermediateDirectories: true
-        )
-        
+        try? FileManager.default.createDirectory(at: casesDirectory, withIntermediateDirectories: true)
         refreshCases()
-        
-        // 👉 Disabled auto-restore at startup
+        // Disabled auto-restore for now
         // restoreActiveCase()
     }
     
     // MARK: - Case Management
     
-    func createCase(named name: String) throws {
-        let safeName = FileHelper.safeName(from: name)
-        let newCaseURL = casesDirectory.appendingPathComponent(safeName, isDirectory: true)
-        
-        if FileManager.default.fileExists(atPath: newCaseURL.path) {
-            throw NSError(domain: "CaseManager",
-                          code: 1,
-                          userInfo: [NSLocalizedDescriptionKey: "Case already exists"])
-        }
+    /// Creates a case folder named after a new UUID. Stores displayName in a metadata file.
+    func createCase(displayName: String) throws {
+        let id = UUID()
+        let newCaseURL = casesDirectory.appendingPathComponent(id.uuidString, isDirectory: true)
         
         try FileManager.default.createDirectory(at: newCaseURL, withIntermediateDirectories: true)
+        
+        // Store displayName in a simple metadata file
+        let metaURL = newCaseURL.appendingPathComponent("case.meta")
+        try displayName.data(using: .utf8)?.write(to: metaURL)
+        
         refreshCases()
     }
     
-    func deleteCase(named name: String) throws {
-        let caseURL = casesDirectory.appendingPathComponent(name, isDirectory: true)
+    func deleteCase(id: UUID) throws {
+        let caseURL = casesDirectory.appendingPathComponent(id.uuidString, isDirectory: true)
         try FileManager.default.removeItem(at: caseURL)
         refreshCases()
         
-        if activeCase?.name == name {
+        if activeCase?.id == id {
             activeCase = nil
         }
     }
@@ -117,15 +107,19 @@ class CaseManager: ObservableObject {
             )
             cases = contents
                 .filter { $0.hasDirectoryPath }
-                .map { url in
-                    let safe = url.lastPathComponent
-                    return CaseInfo(name: safe, displayName: safe, url: url)
+                .compactMap { url in
+                    guard let id = UUID(uuidString: url.lastPathComponent) else { return nil }
+                    
+                    // Load displayName from metadata file, fallback to UUID
+                    let metaURL = url.appendingPathComponent("case.meta")
+                    let displayName = (try? String(contentsOf: metaURL)) ?? id.uuidString
+                    
+                    return CaseInfo(id: id, name: id.uuidString, displayName: displayName, url: url)
                 }
                 .sorted {
                     $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
                 }
         } catch {
-            // 🔄 Quietly handle failure without spamming logs
             cases = []
         }
     }
@@ -137,12 +131,13 @@ class CaseManager: ObservableObject {
             UserDefaults.standard.removeObject(forKey: activeCaseKey)
             return
         }
-        UserDefaults.standard.set(activeCase.name, forKey: activeCaseKey)
+        UserDefaults.standard.set(activeCase.id.uuidString, forKey: activeCaseKey)
     }
     
     private func restoreActiveCase() {
-        if let savedName = UserDefaults.standard.string(forKey: activeCaseKey),
-           let match = cases.first(where: { $0.name == savedName }) {
+        if let savedID = UserDefaults.standard.string(forKey: activeCaseKey),
+           let id = UUID(uuidString: savedID),
+           let match = cases.first(where: { $0.id == id }) {
             activeCase = match
         }
     }

@@ -4,14 +4,16 @@
         <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="filename" optional="YES" attributeType="String"/>
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
-        <relationship name="documents" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="DocumentEntity" inverseName="case" inverseEntity="DocumentEntity"/>
+        <relationship name="documents" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="DocumentEntity" inverseName="caseEntity" inverseEntity="DocumentEntity"/>
     </entity>
     <entity name="DocumentEntity" representedClassName="DocumentEntity" syncable="YES">
         <attribute name="createdAt" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="filename" attributeType="String"/>
+        <attribute name="filePath" optional="YES" attributeType="String"/>
         <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
-        <relationship name="case" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CaseEntity" inverseName="documents" inverseEntity="CaseEntity"/>
+        <relationship name="caseEntity" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CaseEntity" inverseName="documents" inverseEntity="CaseEntity"/>
         <relationship name="headings" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="HeadingEntity" inverseName="document" inverseEntity="HeadingEntity"/>
+        <relationship name="sentences" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="SentenceEntity" inverseName="document" inverseEntity="SentenceEntity"/>
     </entity>
     <entity name="HeadingEntity" representedClassName="ePleadingsMVP.HeadingEntity" syncable="YES">
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
@@ -32,6 +34,7 @@
         <attribute name="pageNumber" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="sourceFilename" optional="YES" attributeType="String"/>
         <attribute name="text" optional="YES" attributeType="String"/>
+        <relationship name="document" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="DocumentEntity" inverseName="sentences" inverseEntity="DocumentEntity"/>
         <relationship name="heading" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="HeadingEntity" inverseName="sentences" inverseEntity="HeadingEntity"/>
     </entity>
 </model>

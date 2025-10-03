@@ -1,3 +1,8 @@
+//
+//  PleadingsPanel.swift
+//  ePleadingsMVP
+//
+
 import SwiftUI
 import PDFKit
 
@@ -25,23 +30,26 @@ struct PleadingsPanel: View {
     }
     
     private func loadPleadings() {
-        guard let documents = caseEntity.documents as? Set<DocumentEntity> else { return }
-        let fm = FileManager.default
-        
-        // Case folder under Documents/Cases/{UUID}
-        let caseFolder = PersistenceController.shared.casesFolder
-            .appendingPathComponent(caseEntity.id.uuidString, isDirectory: true) // ✅ no optional chain
+        guard let documents = caseEntity.documents as? Set<DocumentEntity> else {
+            print("⚠️ No documents relationship for case \(caseEntity.filename)")
+            return
+        }
         
         for doc in documents {
-            let filename = doc.filename   // ✅ non-optional String in DocumentEntity
-            let fileURL = caseFolder.appendingPathComponent(filename)
+            guard let path = doc.filePath else { continue }
+            let url = URL(fileURLWithPath: path)
             
-            if fm.fileExists(atPath: fileURL.path),
-               fileURL.pathExtension.lowercased() == "pdf" {
-                pdfURL = fileURL
+            print("🔎 Checking:", url.path)
+            
+            if FileManager.default.fileExists(atPath: url.path),
+               url.pathExtension.lowercased() == "pdf" {
+                print("✅ Found PDF:", url.path)
+                pdfURL = url
                 return
             }
         }
+        
+        print("⚠️ No matching PDFs found for case:", caseEntity.filename)
     }
 }
 

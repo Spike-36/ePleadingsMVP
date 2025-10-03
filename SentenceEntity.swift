@@ -24,6 +24,9 @@ public class SentenceEntity: NSManagedObject {
     // MARK: - Relationships
     /// Parent heading (inverse of HeadingEntity.sentences)
     @NSManaged public var heading: HeadingEntity?
+
+    /// Parent document (inverse of DocumentEntity.sentences)
+    @NSManaged public var document: DocumentEntity?
 }
 
 // MARK: - Identifiable

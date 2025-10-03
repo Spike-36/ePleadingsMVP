@@ -4,27 +4,18 @@
 //
 
 import SwiftUI
-import CoreData
 
 struct StartupView: View {
-    @Environment(\.managedObjectContext) private var viewContext
-    
-    // Selected Core Data entities
-    @State private var selectedCase: CaseEntity? = nil
-    @State private var navTarget: CaseEntity? = nil
-    @State private var frameTarget: CaseEntity? = nil
-    
-    @State private var showingNewCaseSheet = false
-    @State private var newCaseFilename: String = ""   // ✅ consistent with Core Data model
-    
-    // 🔄 Import service
+    @ObservedObject var caseManager = CaseManager.shared
     private let importService = ImportService()
     
-    // 👉 Fetch all saved cases
-    @FetchRequest(
-        entity: CaseEntity.entity(),
-        sortDescriptors: []   // no sort for now
-    ) private var cases: FetchedResults<CaseEntity>
+    @State private var selectedCase: CaseInfo? = nil   // 👉 used for delete
+    @State private var navTarget: CaseInfo? = nil      // 👉 drives CaseDetailView
+    @State private var showingNewCaseSheet = false
+    @State private var newCaseName: String = ""
+    
+    // 👉 New: toggle for launching CaseViewFrame
+    @State private var frameTarget: CaseInfo? = nil
     
     var body: some View {
         NavigationStack {
@@ -43,32 +34,32 @@ struct StartupView: View {
 // MARK: - Case List
 extension StartupView {
     private var caseList: some View {
-        List(cases, id: \.id) { caseEntity in
-            caseRow(for: caseEntity)
+        List(caseManager.cases, id: \.name) { caseInfo in
+            caseRow(for: caseInfo)
         }
     }
     
-    private func caseRow(for caseEntity: CaseEntity) -> some View {
+    private func caseRow(for caseInfo: CaseInfo) -> some View {
         HStack {
             VStack(alignment: .leading) {
-                Text(caseEntity.filename)   // ✅ Core Data attribute
+                Text(caseInfo.displayName)
                     .foregroundColor(.primary)
                     .onTapGesture {
-                        selectedCase = caseEntity
+                        selectedCase = caseInfo
+                        caseManager.activeCase = caseInfo   // persist
                     }
                 
-                // placeholder icons
                 HStack {
-                    Image(systemName: "doc")
-                        .foregroundColor(.secondary)
-                    Image(systemName: "doc.richtext")
-                        .foregroundColor(.secondary)
+                    Image(systemName: caseInfo.hasDocx ? "doc.fill" : "doc")
+                        .foregroundColor(caseInfo.hasDocx ? .green : .red)
+                    Image(systemName: caseInfo.hasPdf ? "doc.richtext.fill" : "doc.richtext")
+                        .foregroundColor(caseInfo.hasPdf ? .green : .red)
                 }
             }
             
             Spacer()
             
-            Image(systemName: selectedCase == caseEntity ? "checkmark.circle.fill" : "circle")
+            Image(systemName: selectedCase == caseInfo ? "checkmark.circle.fill" : "circle")
                 .foregroundColor(.blue)
         }
     }
@@ -87,29 +78,35 @@ extension StartupView {
                 }
             }
             
-            // 📤 Upload
+            // ⬇️ Import
             ToolbarItem(placement: .automatic) {
                 Button {
-                    if let caseToUpload = selectedCase {
-                        if let doc = importService.importFile(into: caseToUpload) {
-                            print("✅ Imported \(doc.filename) into case: \(caseToUpload.filename)")
-                        } else {
-                            print("⚠️ No file imported")
+                    if let target = selectedCase ?? caseManager.activeCase {
+                        if let result = importService.importFileAndReturn(into: target.name) {
+                            print("✅ Imported file: \(result)")
+                            caseManager.refreshCases()
+                            caseManager.activeCase = target
+                            selectedCase = target
                         }
+                    } else {
+                        print("⚠️ No case selected for import")
                     }
                 } label: {
-                    Label("Upload", systemImage: "arrow.up.circle")
+                    Label("Import", systemImage: "square.and.arrow.down")
                 }
-                .disabled(selectedCase == nil)
             }
             
             // 🗑️ Delete
             ToolbarItem(placement: .automatic) {
                 Button(role: .destructive) {
                     if let caseToDelete = selectedCase {
-                        viewContext.delete(caseToDelete)
-                        try? viewContext.save()
-                        selectedCase = nil
+                        do {
+                            try caseManager.deleteCase(named: caseToDelete.name)
+                            selectedCase = nil
+                            print("🗑️ Deleted case: \(caseToDelete.displayName)")
+                        } catch {
+                            print("❌ Failed to delete case: \(error)")
+                        }
                     }
                 } label: {
                     Label("Delete", systemImage: "trash")
@@ -117,22 +114,26 @@ extension StartupView {
                 .disabled(selectedCase == nil)
             }
             
-            // 🧪 Frame Test
+            // 🧪 Frame Test → CaseViewFrame
             ToolbarItem(placement: .automatic) {
                 Button {
-                    if let target = selectedCase {
-                        frameTarget = target
+                    if let target = selectedCase ?? caseManager.activeCase {
+                        frameTarget = target   // 🔑 triggers navigation to CaseViewFrame
+                    } else {
+                        print("⚠️ No case selected to view frame")
                     }
                 } label: {
                     Label("Frame Test", systemImage: "square.grid.2x2")
                 }
             }
             
-            // 📄 Detail Test
+            // 📄 Detail Test → CaseDetailView
             ToolbarItem(placement: .automatic) {
                 Button {
-                    if let target = selectedCase {
-                        navTarget = target
+                    if let target = selectedCase ?? caseManager.activeCase {
+                        navTarget = target   // 🔑 triggers navigation to CaseDetailView
+                    } else {
+                        print("⚠️ No case selected to view detail")
                     }
                 } label: {
                     Label("Detail Test", systemImage: "doc.text.magnifyingglass")
@@ -168,16 +169,19 @@ extension StartupView {
     
     @ViewBuilder
     private func navDestination() -> some View {
-        if let _ = navTarget {
-            Text("Detail view disabled (CaseDetailView removed)")
-                .foregroundColor(.secondary)
+        if let caseInfo = navTarget {
+            if caseInfo.hasDocx && caseInfo.hasPdf {
+                CaseDetailView(caseInfo: caseInfo)
+            } else {
+                MissingFilesView(caseInfo: caseInfo)
+            }
         }
     }
     
     @ViewBuilder
     private func frameDestination() -> some View {
-        if let caseEntity = frameTarget {
-            CaseViewFrame(caseEntity: caseEntity)
+        if let caseInfo = frameTarget {
+            CaseViewFrame(caseInfo: caseInfo)   // ✅ use correct one
         }
     }
 }
@@ -186,31 +190,28 @@ extension StartupView {
 extension StartupView {
     private var newCaseSheet: some View {
         VStack {
-            Text("Enter new case filename:")
+            Text("Enter new case name:")
                 .font(.headline)
-            
-            TextField("Case filename", text: $newCaseFilename)
+            TextField("Case name", text: $newCaseName)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .padding()
-            
             HStack {
                 Button("Cancel") {
                     showingNewCaseSheet = false
-                    newCaseFilename = ""
+                    newCaseName = ""
                 }
                 Spacer()
                 Button("Create") {
-                    let new = CaseEntity(context: viewContext)
-                    new.id = UUID()
-                    new.filename = newCaseFilename
-                    new.createdAt = Date()
-                    
-                    try? viewContext.save()
-                    
+                    do {
+                        try caseManager.createCase(named: newCaseName)
+                        print("📂 Created new case: \(newCaseName)")
+                    } catch {
+                        print("❌ Failed to create new case: \(error)")
+                    }
                     showingNewCaseSheet = false
-                    newCaseFilename = ""
+                    newCaseName = ""
                 }
-                .disabled(newCaseFilename.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(newCaseName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             .padding()
         }

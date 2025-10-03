@@ -24,7 +24,8 @@ struct CaseViewFrame: View {
         _documents = FetchRequest(
             entity: DocumentEntity.entity(),
             sortDescriptors: [NSSortDescriptor(keyPath: \DocumentEntity.filename, ascending: true)],
-            predicate: NSPredicate(format: "case == %@", caseEntity)   // ✅ Core Data key is "case"
+            // ✅ Must use "caseEntity" (the relationship name in Core Data), not "case"
+            predicate: NSPredicate(format: "caseEntity == %@", caseEntity)
         )
     }
     

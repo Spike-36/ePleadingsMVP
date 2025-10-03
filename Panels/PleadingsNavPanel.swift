@@ -5,20 +5,20 @@ struct PleadingsNavPanel: View {
     @Environment(\.managedObjectContext) private var viewContext
     
     var document: DocumentEntity
-    @Binding var selectedPage: Int?
+    @Binding var selectedHeading: HeadingEntity?   // 🔄 switch from page to heading
     
     @FetchRequest private var headings: FetchedResults<HeadingEntity>
     
-    init(document: DocumentEntity, selectedPage: Binding<Int?>) {
+    init(document: DocumentEntity, selectedHeading: Binding<HeadingEntity?>) {
         self.document = document
-        self._selectedPage = selectedPage
+        self._selectedHeading = selectedHeading
         _headings = FetchRequest(
             entity: HeadingEntity.entity(),
             sortDescriptors: [
                 NSSortDescriptor(keyPath: \HeadingEntity.mappedPageNumber, ascending: true),
                 NSSortDescriptor(keyPath: \HeadingEntity.text, ascending: true)
             ],
-            predicate: NSPredicate(format: "document == %@", document) // ✅ filter by relationship
+            predicate: NSPredicate(format: "document == %@", document)
         )
     }
     
@@ -29,7 +29,7 @@ struct PleadingsNavPanel: View {
                 .padding(.bottom, 4)
             
             if headings.isEmpty {
-                Text("No headings found in \(document.filename)") // ✅ no optional unwrap
+                Text("No headings found in \(document.filename)")
                     .foregroundColor(.secondary)
                     .font(.subheadline)
             } else {
@@ -55,14 +55,13 @@ struct PleadingsNavPanel: View {
     
     @ViewBuilder
     private func headingButton(for heading: HeadingEntity, text: String) -> some View {
-        let mapped = heading.mappedPageNumber
         if text.localizedCaseInsensitiveContains("cond.") ||
             text.localizedCaseInsensitiveContains("condescendence") ||
             text.localizedCaseInsensitiveContains("statement") ||
             text.localizedCaseInsensitiveContains("stat.") {
             
             Button {
-                if mapped > 0 { selectedPage = Int(mapped) }
+                selectedHeading = heading   // 🔄 now sets heading
             } label: {
                 Text(text)
                     .font(.body.bold())
@@ -74,7 +73,7 @@ struct PleadingsNavPanel: View {
                     text.localizedCaseInsensitiveContains("answer") {
             
             Button {
-                if mapped > 0 { selectedPage = Int(mapped) }
+                selectedHeading = heading   // 🔄 now sets heading
             } label: {
                 HStack {
                     Spacer().frame(width: 20)

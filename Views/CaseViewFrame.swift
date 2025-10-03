@@ -11,7 +11,7 @@ import CoreData
 struct CaseViewFrame: View {
     let caseEntity: CaseEntity   // 👈 Core Data entity
     
-    @State private var selectedPage: Int? = nil
+    @State private var selectedHeading: HeadingEntity? = nil   // 🔄 track heading
     
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
@@ -24,8 +24,7 @@ struct CaseViewFrame: View {
         _documents = FetchRequest(
             entity: DocumentEntity.entity(),
             sortDescriptors: [NSSortDescriptor(keyPath: \DocumentEntity.filename, ascending: true)],
-            // ✅ Must use "caseEntity" (the relationship name in Core Data), not "case"
-            predicate: NSPredicate(format: "caseEntity == %@", caseEntity)
+            predicate: NSPredicate(format: "caseEntity == %@", caseEntity) // ✅ filter by relationship
         )
     }
     
@@ -35,7 +34,7 @@ struct CaseViewFrame: View {
             if let document = documents.first {
                 PleadingsNavPanel(
                     document: document,
-                    selectedPage: $selectedPage
+                    selectedHeading: $selectedHeading
                 )
             } else {
                 Text("No pleadings document found")
@@ -45,15 +44,17 @@ struct CaseViewFrame: View {
             // Main panel: pleadings viewer
             PleadingsPanel(
                 caseEntity: caseEntity,
-                selectedPage: $selectedPage
+                selectedHeading: $selectedHeading
             )
         }
-        .onChange(of: selectedPage) { newPage in
-            if let page = newPage {
-                print("✅ CaseViewFrame observed selectedPage change →", page)
+        .onAppear {
+            runHeadingMapperIfNeeded()
+        }
+        .onChange(of: selectedHeading) { newHeading in
+            if let h = newHeading {
+                print("✅ CaseViewFrame observed selectedHeading change → \(h.text ?? "nil") [page \(h.mappedPageNumber)]")
             }
         }
-        // ✅ direct property access — no more KVC
         .navigationTitle(caseEntity.filename)
         .toolbar {
             ToolbarItem(placement: .navigation) {
@@ -69,6 +70,15 @@ struct CaseViewFrame: View {
                 }
             }
         }
+    }
+    
+    private func runHeadingMapperIfNeeded() {
+        guard let document = documents.first,
+              let path = document.filePath else { return }
+        
+        let pdfURL = URL(fileURLWithPath: path)
+        let mapper = HeadingToPageMapper(context: viewContext, pdfURL: pdfURL)
+        mapper.mapHeadingsToPages()
     }
 }
 

@@ -5,7 +5,7 @@ struct PleadingsNavPanel: View {
     @Environment(\.managedObjectContext) private var viewContext
     
     var document: DocumentEntity
-    @Binding var selectedHeading: HeadingEntity?   // 🔄 switch from page to heading
+    @Binding var selectedHeading: HeadingEntity?
     
     @FetchRequest private var headings: FetchedResults<HeadingEntity>
     
@@ -55,56 +55,87 @@ struct PleadingsNavPanel: View {
     
     @ViewBuilder
     private func headingButton(for heading: HeadingEntity, text: String) -> some View {
-        if text.localizedCaseInsensitiveContains("cond.") ||
-            text.localizedCaseInsensitiveContains("condescendence") ||
-            text.localizedCaseInsensitiveContains("statement") ||
-            text.localizedCaseInsensitiveContains("stat.") {
-            
-            Button {
-                selectedHeading = heading   // 🔄 now sets heading
-            } label: {
+        let isAnswer = text.localizedCaseInsensitiveContains("ans.")
+            || text.localizedCaseInsensitiveContains("answer")
+        
+        Button {
+            selectedHeading = heading
+        } label: {
+            HStack {
+                if isAnswer {
+                    Spacer().frame(width: 20) // indent answers
+                }
                 Text(text)
-                    .font(.body.bold())
+                    .font(isAnswer ? .body : .body.bold())
                     .padding(.vertical, 2)
             }
-            .buttonStyle(.plain)
-            
-        } else if text.localizedCaseInsensitiveContains("ans.") ||
-                    text.localizedCaseInsensitiveContains("answer") {
-            
-            Button {
-                selectedHeading = heading   // 🔄 now sets heading
-            } label: {
-                HStack {
-                    Spacer().frame(width: 20)
-                    Text(text)
-                        .font(.body)
-                        .padding(.vertical, 2)
-                }
-            }
-            .buttonStyle(.plain)
         }
+        .buttonStyle(.plain)
     }
     
-    private func groupedHeadings() -> [[HeadingEntity]] {
+    /// Groups so each Cond/Stat has exactly one Answer after it
+    func groupedHeadings() -> [[HeadingEntity]] {
         var groups: [[HeadingEntity]] = []
         var currentGroup: [HeadingEntity] = []
+        var expectingAnswer = false
+        
+        func flushGroup() {
+            if !currentGroup.isEmpty {
+                print("📦 Flushing group: \(currentGroup.compactMap { $0.text })")
+                groups.append(currentGroup)
+                currentGroup = []
+            }
+            expectingAnswer = false
+        }
+        
+        // 🔎 DEBUG: dump raw order before grouping
+        print("🔎 Raw heading order from Core Data (\(headings.count)):")
+        for (i, h) in headings.enumerated() {
+            let text = h.text ?? "<nil>"
+            let page = h.mappedPageNumber    // Int32, safe default is 0
+            print("(\(i+1)) ➡️ '\(text)' @ page \(page)")
+        }
         
         for heading in headings {
-            if let text = heading.text {
-                if text.localizedCaseInsensitiveContains("cond.") ||
-                    text.localizedCaseInsensitiveContains("condescendence") ||
-                    text.localizedCaseInsensitiveContains("statement") ||
-                    text.localizedCaseInsensitiveContains("stat.") {
-                    if !currentGroup.isEmpty {
-                        groups.append(currentGroup)
-                        currentGroup = []
-                    }
-                }
+            guard let text = heading.text else { continue }
+            
+            let isStatementOrCond =
+                text.localizedCaseInsensitiveContains("cond.") ||
+                text.localizedCaseInsensitiveContains("condescendence") ||
+                text.localizedCaseInsensitiveContains("statement") ||
+                text.localizedCaseInsensitiveContains("stat.")
+            
+            let isAnswer =
+                text.localizedCaseInsensitiveContains("ans.") ||
+                text.localizedCaseInsensitiveContains("answer")
+            
+            if isStatementOrCond {
+                print("➡️ New Statement: \(text)")
+                flushGroup()
                 currentGroup.append(heading)
+                expectingAnswer = true
+            } else if isAnswer, expectingAnswer {
+                print("✅ Pairing Answer '\(text)' with \(currentGroup.first?.text ?? "<none>")")
+                currentGroup.append(heading)
+                flushGroup() // only allow one Answer per Cond/Stat
+            } else if isAnswer {
+                print("⚠️ Orphan Answer: \(text) → standalone group")
+                flushGroup()
+                currentGroup.append(heading)
+                flushGroup()
+            } else {
+                // ignore extras (no grouping for unmatched items)
+                continue
             }
         }
-        if !currentGroup.isEmpty { groups.append(currentGroup) }
+        
+        flushGroup()
+        
+        print("🔎 Grouping complete. Total groups: \(groups.count)")
+        for (i, g) in groups.enumerated() {
+            print("(\(i+1)) \(g.compactMap { $0.text })")
+        }
+        
         return groups
     }
 }

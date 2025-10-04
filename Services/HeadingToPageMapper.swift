@@ -54,21 +54,38 @@ final class HeadingToPageMapper {
 
     /// Find the first page+bounds for the given text (case-insensitive) using PDFKit text content.
     private func find(text raw: String) -> (Int, CGRect)? {
-        // Normalize a little (helps with trailing spaces etc.)
-        let needle = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let needle = normalizeWhitespace(raw)
 
         for i in 0..<pdfDocument.pageCount {
             guard let page = pdfDocument.page(at: i),
                   let pageString = page.string else { continue }
 
-            if let range = pageString.range(of: needle, options: [.caseInsensitive]) {
-                let ns = NSRange(range, in: pageString)
+            let haystack = normalizeWhitespace(pageString)
+
+            if let range = haystack.range(of: needle, options: [.caseInsensitive]) {
+                let ns = NSRange(range, in: haystack)
                 if let sel = page.selection(for: ns) {
                     return (i, sel.bounds(for: page))
                 }
+            } else {
+                // 🔍 Debug log: show normalized heading + snippet of the haystack
+                let snippet = haystack.prefix(200).replacingOccurrences(of: "\n", with: "⏎")
+                print("   [p\(i+1)] Searching for '\(needle)' not found in first 200 chars: \(snippet)…")
             }
         }
         return nil
     }
+
+    /// Collapse all whitespace (spaces, tabs, newlines, NBSP, thin spaces) into single spaces
+    private func normalizeWhitespace(_ s: String) -> String {
+        let ws = CharacterSet.whitespacesAndNewlines
+            .union(.init(charactersIn: "\u{00A0}\u{2000}\u{2001}\u{2002}\u{2003}\u{2009}"))
+
+        let collapsed = s.unicodeScalars.map { ws.contains($0) ? " " : String($0) }.joined()
+        return collapsed
+            .replacingOccurrences(of: " +", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 }
+
 

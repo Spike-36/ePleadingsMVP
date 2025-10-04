@@ -27,10 +27,21 @@ final class ImportService: ObservableObject {
         guard panel.runModal() == .OK, let pickedURL = panel.url else { return nil }
         
         do {
+            let context = caseEntity.managedObjectContext!
+            
+            // 🔄 Check if document already exists for this case
+            let fetch: NSFetchRequest<DocumentEntity> = DocumentEntity.fetchRequest()
+            fetch.predicate = NSPredicate(format: "filename == %@ AND caseEntity == %@",
+                                          pickedURL.lastPathComponent, caseEntity)
+            
+            if let existing = try? context.fetch(fetch).first {
+                print("⚠️ Document already imported: \(existing.filename ?? "?")")
+                return existing
+            }
+            
             // ✅ Always save files into UUID-based case folder
             let copiedURL = try FileHelper.copyFile(from: pickedURL, toCaseID: caseEntity.id)
             
-            let context = caseEntity.managedObjectContext!
             let document = DocumentEntity(context: context)
             
             // ✅ Required fields

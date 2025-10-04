@@ -9,7 +9,7 @@ import Foundation
 import ZIPFoundation
 
 /// DOCX parser for MVP.
-/// Unzips .docx → extracts /word/document.xml → walks with XMLParser → collects <w:t> runs into paragraphs.
+/// Unzips .docx → extracts /word/document.xml → walks with XMLParser → collects <w:t> runs into normalized paragraphs.
 class DocxParser: NSObject {
     private var paragraphs: [String] = []
     private var currentParagraph: String = ""
@@ -39,27 +39,39 @@ class DocxParser: NSObject {
         return paragraphs
     }
 
-    /// Stage 3.2 stub:
     /// Scan parsed paragraphs for headings like "Statement 1" / "Answer 2" / "Cond. 3"
+    /// Only captures the prefix (e.g. "Cond. 5", "Ans. 3"), not the trailing narrative.
     func parseHeadings(at url: URL) throws -> [String] {
         let paras = try parseDocx(at: url)
 
-        // Regex: heading if starts with Statement/Answer/Cond variants + number (+ trailing text allowed)
+        // Regex captures only the prefix (group 0)
         let regex = try NSRegularExpression(
-            pattern: "^(Statement|Stat\\.?|Answer|Ans\\.?|Condescendence|Cond\\.?)\\s+\\d+\\b.*",
+            pattern: "^(Statement|Stat\\.?|Answer|Ans\\.?|Condescendence|Cond\\.?)\\s*\\d+",
             options: [.caseInsensitive]
         )
 
         var found: [String] = []
         for para in paras {
             let range = NSRange(para.startIndex..<para.endIndex, in: para)
-            if regex.firstMatch(in: para, options: [], range: range) != nil {
-                print("📑 Found heading: \(para)")
-                found.append(para)
+            if let match = regex.firstMatch(in: para, options: [], range: range),
+               let swiftRange = Range(match.range, in: para) {
+                let headingOnly = String(para[swiftRange])
+                print("📑 Found heading: \(headingOnly) (from paragraph: '\(para)')")
+                found.append(headingOnly)
             }
         }
 
         return found
+    }
+
+    /// Collapse all whitespace variants (space, tabs, NBSP, thin spaces) into a single " ".
+    private func normalizeWhitespace(_ s: String) -> String {
+        let ws = CharacterSet.whitespacesAndNewlines
+            .union(.init(charactersIn: "\u{00A0}\u{2000}\u{2001}\u{2002}\u{2003}\u{2009}"))
+
+        let mapped = s.unicodeScalars.map { ws.contains($0) ? " " : String($0) }.joined()
+        return mapped.replacingOccurrences(of: " +", with: " ", options: .regularExpression)
+                     .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 
@@ -74,7 +86,7 @@ extension DocxParser: XMLParserDelegate {
         case "w:p":
             currentParagraph = ""   // start new paragraph
         case "w:t":
-            insideText = true
+            insideText = true       // ✅ ignore style attrs, just take text
         case "w:tab":
             currentParagraph.append("\t")
         case "w:br":
@@ -100,7 +112,8 @@ extension DocxParser: XMLParserDelegate {
         case "w:p":
             let trimmed = currentParagraph.trimmingCharacters(in: .whitespacesAndNewlines)
             if !trimmed.isEmpty {
-                paragraphs.append(trimmed)
+                // ✅ normalize before saving
+                paragraphs.append(normalizeWhitespace(trimmed))
             }
         default:
             break

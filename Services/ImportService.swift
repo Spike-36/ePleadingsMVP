@@ -15,6 +15,9 @@ final class ImportService: ObservableObject {
     @Published var importedFiles: [CaseFile] = []
     
     func importFile(into caseEntity: CaseEntity) -> DocumentEntity? {
+        let callID = UUID().uuidString.prefix(6)  // short unique tag for tracing
+        print("🟢 importFile() called [\(callID)] for case: \(caseEntity.filename ?? "Unknown Case")")
+        
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
@@ -24,43 +27,51 @@ final class ImportService: ObservableObject {
             UTType(filenameExtension: "docx")!
         ]
         
-        guard panel.runModal() == .OK, let pickedURL = panel.url else { return nil }
+        guard panel.runModal() == .OK, let pickedURL = panel.url else {
+            print("🔴 [\(callID)] Import cancelled or no file selected")
+            return nil
+        }
         
         do {
-            let context = caseEntity.managedObjectContext!
+            guard let context = caseEntity.managedObjectContext else {
+                print("❌ [\(callID)] No managed object context found for case.")
+                return nil
+            }
             
-            // 🔄 Check if document already exists for this case
+            // ✅ Check using full file path and case ID (safe across contexts)
             let fetch: NSFetchRequest<DocumentEntity> = DocumentEntity.fetchRequest()
-            fetch.predicate = NSPredicate(format: "filename == %@ AND caseEntity == %@",
-                                          pickedURL.lastPathComponent, caseEntity)
+            fetch.predicate = NSPredicate(
+                format: "filePath == %@ AND caseEntity.id == %@",
+                pickedURL.path, caseEntity.id as CVarArg
+            )
             
             if let existing = try? context.fetch(fetch).first {
-                print("⚠️ Document already imported: \(existing.filename ?? "?")")
+                print("⚠️ [\(callID)] Document already imported (same path + case): \(existing.filename ?? "?")")
                 return existing
             }
             
-            // ✅ Always save files into UUID-based case folder
+            // ✅ Always copy into the case’s own folder (unique destination)
             let copiedURL = try FileHelper.copyFile(from: pickedURL, toCaseID: caseEntity.id)
             
             let document = DocumentEntity(context: context)
             
-            // ✅ Required fields
+            // 🔄 Required fields
             document.id = UUID()
             document.createdAt = Date()
             document.filename = pickedURL.lastPathComponent
             document.filePath = copiedURL.path
             document.caseEntity = caseEntity   // link back to the case
             
-            // 👉 If DOCX, parse headings right now
+            // 👉 If DOCX, parse headings immediately
             if copiedURL.pathExtension.lowercased() == "docx" {
                 let parserService = DocxParserService()
                 do {
-                    try parserService.extractHeadings(for: document, in: context)
+                    try parserService.extractHeadings(for: document, in: context, callID: String(callID))
                 } catch {
-                    print("⚠️ Failed to parse headings for \(document.filename ?? "?"): \(error)")
+                    print("⚠️ [\(callID)] Failed to parse headings for \(document.filename ?? "?"): \(error)")
                 }
             } else {
-                // Otherwise, add a dummy heading so UI isn’t empty
+                // 🧩 Fallback dummy heading for PDFs
                 let heading = HeadingEntity(context: context)
                 heading.id = UUID()
                 heading.text = "Imported: \(document.filename ?? "Unknown")"
@@ -71,10 +82,10 @@ final class ImportService: ObservableObject {
                 try context.save()
             }
             
-            print("✅ Imported \(document.filename ?? "?") into case: \(caseEntity.filename ?? "Unknown Case")")
+            print("✅ [\(callID)] Imported \(document.filename ?? "?") into case: \(caseEntity.filename ?? "Unknown Case")")
             return document
         } catch {
-            print("❌ Failed to import file: \(error)")
+            print("❌ [\(callID)] Failed to import file: \(error)")
             return nil
         }
     }

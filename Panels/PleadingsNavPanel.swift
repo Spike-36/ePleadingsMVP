@@ -12,14 +12,8 @@ struct PleadingsNavPanel: View {
     init(document: DocumentEntity, selectedHeading: Binding<HeadingEntity?>) {
         self.document = document
         self._selectedHeading = selectedHeading
-        _headings = FetchRequest(
-            entity: HeadingEntity.entity(),
-            sortDescriptors: [
-                NSSortDescriptor(keyPath: \HeadingEntity.mappedPageNumber, ascending: true),
-                NSSortDescriptor(keyPath: \HeadingEntity.text, ascending: true)
-            ],
-            predicate: NSPredicate(format: "document == %@", document)
-        )
+        // ✅ Now use the helper for consistent ordering
+        _headings = FetchRequest(fetchRequest: HeadingFetchService.fetchRequest(for: document))
     }
     
     var body: some View {
@@ -73,7 +67,8 @@ struct PleadingsNavPanel: View {
         .buttonStyle(.plain)
     }
     
-    /// Groups so each Cond/Stat has exactly one Answer after it
+    /// Groups so each Statement/Cond has at most one Answer after it.
+    /// Assumes `headings` are already sorted by orderIndex.
     func groupedHeadings() -> [[HeadingEntity]] {
         var groups: [[HeadingEntity]] = []
         var currentGroup: [HeadingEntity] = []
@@ -81,19 +76,10 @@ struct PleadingsNavPanel: View {
         
         func flushGroup() {
             if !currentGroup.isEmpty {
-                print("📦 Flushing group: \(currentGroup.compactMap { $0.text })")
                 groups.append(currentGroup)
                 currentGroup = []
             }
             expectingAnswer = false
-        }
-        
-        // 🔎 DEBUG: dump raw order before grouping
-        print("🔎 Raw heading order from Core Data (\(headings.count)):")
-        for (i, h) in headings.enumerated() {
-            let text = h.text ?? "<nil>"
-            let page = h.mappedPageNumber    // Int32, safe default is 0
-            print("(\(i+1)) ➡️ '\(text)' @ page \(page)")
         }
         
         for heading in headings {
@@ -110,32 +96,20 @@ struct PleadingsNavPanel: View {
                 text.localizedCaseInsensitiveContains("answer")
             
             if isStatementOrCond {
-                print("➡️ New Statement: \(text)")
                 flushGroup()
                 currentGroup.append(heading)
                 expectingAnswer = true
             } else if isAnswer, expectingAnswer {
-                print("✅ Pairing Answer '\(text)' with \(currentGroup.first?.text ?? "<none>")")
                 currentGroup.append(heading)
-                flushGroup() // only allow one Answer per Cond/Stat
+                flushGroup()   // only one Answer allowed
             } else if isAnswer {
-                print("⚠️ Orphan Answer: \(text) → standalone group")
+                // Orphan answer: put in its own group
                 flushGroup()
-                currentGroup.append(heading)
-                flushGroup()
-            } else {
-                // ignore extras (no grouping for unmatched items)
-                continue
+                groups.append([heading])
             }
         }
         
         flushGroup()
-        
-        print("🔎 Grouping complete. Total groups: \(groups.count)")
-        for (i, g) in groups.enumerated() {
-            print("(\(i+1)) \(g.compactMap { $0.text })")
-        }
-        
         return groups
     }
 }

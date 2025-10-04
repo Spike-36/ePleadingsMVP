@@ -2,11 +2,6 @@
 //  DocxParserService.swift
 //  ePleadingsMVP
 //
-//  Created by Peter Milligan on 03/10/2025.
-////
-//  DocxParserService.swift
-//  ePleadingsMVP
-//
 //  Created by Pete on 03/10/2025.
 //
 
@@ -31,14 +26,14 @@ final class DocxParserService {
             return
         }
         
-        // 1. Parse text paragraphs
-        let headings = try parser.parseHeadings(at: url)
-        if headings.isEmpty {
+        // 1. Parse headings → returns [ParsedHeading]
+        let parsedHeadings = try parser.parseHeadings(at: url)
+        if parsedHeadings.isEmpty {
             print("⚠️ No headings detected in \(url.lastPathComponent)")
             return
         }
         
-        print("📑 Extracted \(headings.count) heading(s) from \(url.lastPathComponent)")
+        print("📑 Extracted \(parsedHeadings.count) heading(s) from \(url.lastPathComponent)")
         
         // 2. Remove any old headings linked to this document
         if let old = document.headings as? Set<HeadingEntity> {
@@ -46,22 +41,19 @@ final class DocxParserService {
         }
         
         // 3. Create new HeadingEntity rows
-        var pageCounter: Int32 = 1
-        for text in headings {
+        for parsed in parsedHeadings {
             let heading = HeadingEntity(context: context)
             heading.id = UUID()
-            heading.text = text
+            heading.text = parsed.text                  // ✅ Actual heading text
+            heading.orderIndex = Int32(parsed.orderIndex) // ✅ Canonical order
             heading.level = 1
-            heading.pageNumber = pageCounter   // 🔄 placeholder until mapping done
             heading.sourceFilename = document.filename
             heading.document = document
-            pageCounter += 1
         }
         
         // 4. Save
         try context.save()
-        print("✅ Saved \(headings.count) headings into Core Data for \(document.filename ?? "?")")
+        print("✅ Saved \(parsedHeadings.count) headings into Core Data for \(document.filename ?? "?")")
     }
 }
-
 

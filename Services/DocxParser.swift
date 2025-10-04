@@ -8,6 +8,12 @@
 import Foundation
 import ZIPFoundation
 
+/// Parsed heading with deterministic order index
+struct ParsedHeading {
+    let text: String
+    let orderIndex: Int
+}
+
 /// DOCX parser for MVP.
 /// Unzips .docx → extracts /word/document.xml → walks with XMLParser → collects <w:t> runs into normalized paragraphs.
 class DocxParser: NSObject {
@@ -40,24 +46,25 @@ class DocxParser: NSObject {
     }
 
     /// Scan parsed paragraphs for headings like "Statement 1" / "Answer 2" / "Cond. 3"
-    /// Only captures the prefix (e.g. "Cond. 5", "Ans. 3"), not the trailing narrative.
-    func parseHeadings(at url: URL) throws -> [String] {
+    /// Returns an ordered array of ParsedHeading (with `orderIndex`).
+    func parseHeadings(at url: URL) throws -> [ParsedHeading] {
         let paras = try parseDocx(at: url)
 
-        // Regex captures only the prefix (group 0)
         let regex = try NSRegularExpression(
             pattern: "^(Statement|Stat\\.?|Answer|Ans\\.?|Condescendence|Cond\\.?)\\s*\\d+",
             options: [.caseInsensitive]
         )
 
-        var found: [String] = []
+        var found: [ParsedHeading] = []
+        var counter = 0
         for para in paras {
             let range = NSRange(para.startIndex..<para.endIndex, in: para)
             if let match = regex.firstMatch(in: para, options: [], range: range),
                let swiftRange = Range(match.range, in: para) {
                 let headingOnly = String(para[swiftRange])
-                print("📑 Found heading: \(headingOnly) (from paragraph: '\(para)')")
-                found.append(headingOnly)
+                counter += 1
+                print("📑 Found heading [\(counter)]: \(headingOnly)")
+                found.append(ParsedHeading(text: headingOnly, orderIndex: counter))
             }
         }
 

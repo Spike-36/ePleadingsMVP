@@ -22,6 +22,9 @@ public class HeadingEntity: NSManagedObject {
     @NSManaged public var pageNumber: Int32
     @NSManaged public var sourceFilename: String?
 
+    // Order within the document
+    @NSManaged public var orderIndex: Int32   // 👉 New attribute
+
     // MARK: - Mapped PDF positioning
     @NSManaged public var mappedPageNumber: Int32
     @NSManaged public var mappedX: Double

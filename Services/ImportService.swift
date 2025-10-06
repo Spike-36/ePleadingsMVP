@@ -62,8 +62,9 @@ final class ImportService: ObservableObject {
             document.filePath = copiedURL.path
             document.caseEntity = caseEntity   // link back to the case
             
-            // 👉 If DOCX, parse headings immediately
+            // 👉 Handle DOCX or PDF
             if copiedURL.pathExtension.lowercased() == "docx" {
+                // 🧩 Parse headings for DOCX
                 let parserService = DocxParserService()
                 do {
                     try parserService.extractHeadings(for: document, in: context, callID: String(callID))
@@ -80,6 +81,10 @@ final class ImportService: ObservableObject {
                 heading.sourceFilename = document.filename
                 heading.document = document
                 try context.save()
+                
+                // 👉 Immediately map sentence bounding boxes (PDF only)
+                let mapper = SentenceMapperService()
+                mapper.mapSentences(in: document, using: context)
             }
             
             print("✅ [\(callID)] Imported \(document.filename ?? "?") into case: \(caseEntity.filename ?? "Unknown Case")")

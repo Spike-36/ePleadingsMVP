@@ -21,6 +21,12 @@ public class SentenceEntity: NSManagedObject {
     @NSManaged public var sourceFilename: String?
     @NSManaged public var text: String
 
+    // 🟨 Bounding box coordinates (added for Phase 6.2)
+    @NSManaged public var mappedX: Double
+    @NSManaged public var mappedY: Double
+    @NSManaged public var mappedWidth: Double
+    @NSManaged public var mappedHeight: Double
+
     // MARK: - Relationships
     /// Parent heading (inverse of HeadingEntity.sentences)
     @NSManaged public var heading: HeadingEntity?

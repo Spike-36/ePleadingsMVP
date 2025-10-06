@@ -78,7 +78,14 @@ struct PDFViewRepresentable: NSViewRepresentable {
             self.parent = parent
         }
         
+        // 👉 Updated handleClick now treats Control-click as right-click
         @objc func handleClick(_ gesture: NSClickGestureRecognizer) {
+            // ✅ If user Control-clicked, forward to right-click handler
+            if NSEvent.modifierFlags.contains(.control) {
+                handleRightClick(gesture)
+                return
+            }
+
             guard let overlay = gesture.view as? NSView,
                   let container = overlay.superview as? PDFContainerView,
                   let pdfView = container.pdfView else { return }
@@ -115,7 +122,7 @@ struct PDFViewRepresentable: NSViewRepresentable {
             }
         }
         
-        // 👉 handleRightClick for Phase 6.1
+        // 👉 Right-click handler
         @objc func handleRightClick(_ gesture: NSClickGestureRecognizer) {
             guard let container = gesture.view?.superview as? PDFContainerView,
                   let pdfView = container.pdfView else { return }
@@ -178,14 +185,6 @@ final class PDFContainerView: NSView {
         overlay.addGestureRecognizer(rightClick)
         
         print("✅ Overlay ready: left/right recognizers attached (\(overlay.gestureRecognizers.count) total).")
-        
-        // 🔄 Optional monitor for low-level events (uncomment for debugging)
-        /*
-        NSEvent.addLocalMonitorForEvents(matching: [.rightMouseDown]) { event in
-            print("🧩 RightMouseDown monitor → location: \(event.locationInWindow)")
-            return event
-        }
-        */
     }
 }
 

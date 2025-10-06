@@ -52,16 +52,6 @@
 		50A5CFF52E835A3B00BD6624 /* ePleadingsMVPApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ePleadingsMVPApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		5031F3E82E91E88B0047F3A2 /* Exceptions for "Panels" folder in "ePleadingsMVP" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Untitled.swift,
-			);
-			target = 5086B3322E82DD3300F80D9E /* ePleadingsMVP */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		504074B92E837EC000E08A27 /* Services */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -85,9 +75,6 @@
 		};
 		506B44822E8688BD00C7F2F5 /* Panels */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				5031F3E82E91E88B0047F3A2 /* Exceptions for "Panels" folder in "ePleadingsMVP" target */,
-			);
 			path = Panels;
 			sourceTree = "<group>";
 		};

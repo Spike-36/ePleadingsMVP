@@ -1,18 +1,27 @@
+//
+//  PleadingsNavPanel.swift
+//  ePleadingsMVP
+//
+
 import SwiftUI
 import CoreData
 
 struct PleadingsNavPanel: View {
     @Environment(\.managedObjectContext) private var viewContext
-    
+
     var document: DocumentEntity
     @Binding var selectedHeading: HeadingEntity?
-    
+    @Binding var pairedHeading: HeadingEntity?   // ✅ NEW: expose the computed pair
+
     @FetchRequest private var headings: FetchedResults<HeadingEntity>
-    
-    init(document: DocumentEntity, selectedHeading: Binding<HeadingEntity?>) {
+
+    init(document: DocumentEntity,
+         selectedHeading: Binding<HeadingEntity?>,
+         pairedHeading: Binding<HeadingEntity?>) {
         self.document = document
         self._selectedHeading = selectedHeading
-        
+        self._pairedHeading = pairedHeading
+
         // ✅ Match by UUID, not object instance
         let request: NSFetchRequest<HeadingEntity> = HeadingEntity.fetchRequest()
         request.predicate = NSPredicate(
@@ -21,16 +30,16 @@ struct PleadingsNavPanel: View {
         request.sortDescriptors = [
             NSSortDescriptor(keyPath: \HeadingEntity.orderIndex, ascending: true)
         ]
-        
+
         _headings = FetchRequest(fetchRequest: request)
     }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Headings")
                 .font(.headline)
                 .padding(.bottom, 4)
-            
+
             if headings.isEmpty {
                 Text("No headings found in \(document.filename)")
                     .foregroundColor(.secondary)
@@ -59,12 +68,12 @@ struct PleadingsNavPanel: View {
         }
         .padding()
     }
-    
+
     // MARK: - Grouping logic
     private func groupedHeadings() -> [[HeadingEntity]] {
         var groups: [[HeadingEntity]] = []
         var current: [HeadingEntity] = []
-        
+
         for heading in headings {
             if let text = heading.text,
                text.localizedCaseInsensitiveContains("cond.") ||
@@ -79,13 +88,13 @@ struct PleadingsNavPanel: View {
             }
             current.append(heading)
         }
-        
+
         if !current.isEmpty {
             groups.append(current)
         }
         return groups
     }
-    
+
     // MARK: - Button rendering
     @ViewBuilder
     private func headingButton(for heading: HeadingEntity, text: String) -> some View {
@@ -94,13 +103,16 @@ struct PleadingsNavPanel: View {
             text.localizedCaseInsensitiveContains("condescendence") ||
             text.localizedCaseInsensitiveContains("statement") ||
             text.localizedCaseInsensitiveContains("stat.")
-        
+
         let isAnswer =
             text.localizedCaseInsensitiveContains("ans.") ||
             text.localizedCaseInsensitiveContains("answer")
-        
+
         Button {
+            // Primary selection
             selectedHeading = heading
+            // Compute + publish the pair using the locally fetched list
+            pairedHeading = HeadingPairMatcher.findPair(for: heading, in: Array(headings))
         } label: {
             HStack {
                 if isAnswer {

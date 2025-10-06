@@ -10,10 +10,17 @@ import CoreData
 
 struct CaseViewFrame: View {
     let caseEntity: CaseEntity
+
+    // Single-mode selection (kept)
     @State private var selectedHeading: HeadingEntity? = nil
-    @State private var leftHeading: HeadingEntity? = nil     // 👉 new
-    @State private var rightHeading: HeadingEntity? = nil    // 👉 new
-    @State private var isSplitViewMode: Bool = false         // toggle state
+
+    // Split-mode derived selections
+    @State private var pairedHeading: HeadingEntity? = nil     // from the NavPanel
+    @State private var leftHeading: HeadingEntity? = nil       // drives left PDF
+    @State private var rightHeading: HeadingEntity? = nil      // drives right PDF
+
+    // Toggle state
+    @State private var isSplitViewMode: Bool = false
 
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
@@ -31,11 +38,12 @@ struct CaseViewFrame: View {
 
     var body: some View {
         NavigationSplitView {
-            // Sidebar: pleadings navigation
+            // Sidebar: pleadings navigation (reused)
             if let document = documents.first {
                 PleadingsNavPanel(
                     document: document,
-                    selectedHeading: $selectedHeading
+                    selectedHeading: $selectedHeading,
+                    pairedHeading: $pairedHeading
                 )
             } else {
                 Text("No pleadings document found")
@@ -57,10 +65,12 @@ struct CaseViewFrame: View {
             }
         }
         .onAppear { runHeadingMapperIfNeeded() }
-        .onChange(of: selectedHeading) { newHeading in
-            if let h = newHeading {
-                print("✅ selectedHeading → \(h.text ?? "nil") [page \(h.mappedPageNumber)]")
-            }
+        // When primary or paired updates, compute left/right placement
+        .onChange(of: selectedHeading) { _ in
+            recomputeSplitTargets()
+        }
+        .onChange(of: pairedHeading) { _ in
+            recomputeSplitTargets()
         }
         .navigationTitle(caseEntity.filename)
         .toolbar {
@@ -72,6 +82,7 @@ struct CaseViewFrame: View {
                 Button(isSplitViewMode ? "Single View" : "Split View") {
                     isSplitViewMode.toggle()
                     print("🔁 Split view mode toggled → \(isSplitViewMode ? "ON" : "OFF")")
+                    // Keep current selections; no reset needed
                 }
             }
 
@@ -86,13 +97,41 @@ struct CaseViewFrame: View {
         }
     }
 
+    // Decide which side each heading should occupy
+    private func recomputeSplitTargets() {
+        guard let primary = selectedHeading else {
+            leftHeading = nil
+            rightHeading = nil
+            return
+        }
+
+        let text = (primary.text ?? "").lowercased()
+        let isAnswer = text.contains("ans.") || text.contains("answer")
+
+        if isAnswer {
+            // Right = the clicked Answer; Left = its Statement/Cond (if any)
+            rightHeading = primary
+            leftHeading = pairedHeading
+        } else {
+            // Left = the clicked Statement/Cond; Right = its Answer (if any)
+            leftHeading = primary
+            rightHeading = pairedHeading
+        }
+
+        if let l = leftHeading?.text { print("🟩 Left target → \(l)") }
+        if let r = rightHeading?.text { print("🟦 Right target → \(r)") }
+    }
+
+    // Existing mapping bootstrap
     private func runHeadingMapperIfNeeded() {
         let docs = Array(documents)
         guard !docs.isEmpty else { return }
 
+        // Prefer a PDF doc
         let pdfDocEntity = docs.first { ($0.filePath ?? "").lowercased().hasSuffix(".pdf") }
         let docxDocEntity = docs.first { ($0.filePath ?? "").lowercased().hasSuffix(".docx") }
 
+        // Resolve actual PDF URL
         var resolvedPDFURL: URL?
         if let pdfPath = pdfDocEntity?.filePath {
             resolvedPDFURL = URL(fileURLWithPath: pdfPath)
@@ -110,6 +149,7 @@ struct CaseViewFrame: View {
             return
         }
 
+        // Use headings from the DOCX (fallback: headings from the PDF doc entity)
         let headings: [HeadingEntity] =
             (docxDocEntity?.headings?.allObjects as? [HeadingEntity]) ??
             (pdfDocEntity?.headings?.allObjects as? [HeadingEntity]) ??
@@ -117,7 +157,9 @@ struct CaseViewFrame: View {
 
         print("🧭 runHeadingMapperIfNeeded → Using PDF: \(pdfURL.lastPathComponent); headings=\(headings.count)")
 
-        guard let mapper = HeadingToPageMapper(context: viewContext, pdfURL: pdfURL) else { return }
+        guard let mapper = HeadingToPageMapper(context: viewContext, pdfURL: pdfURL) else {
+            return
+        }
         mapper.mapHeadings(headings)
     }
 }

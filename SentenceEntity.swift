@@ -27,6 +27,9 @@ public class SentenceEntity: NSManagedObject {
     @NSManaged public var mappedWidth: Double
     @NSManaged public var mappedHeight: Double
 
+    // 🟩 New tagging state (added for Phase 6.4)
+    @NSManaged public var state: String?
+
     // MARK: - Relationships
     /// Parent heading (inverse of HeadingEntity.sentences)
     @NSManaged public var heading: HeadingEntity?
@@ -37,4 +40,19 @@ public class SentenceEntity: NSManagedObject {
 
 // MARK: - Identifiable
 extension SentenceEntity: Identifiable {}
+
+// MARK: - Convenience Enum
+extension SentenceEntity {
+    enum SentenceState: String {
+        case admitted = "Admitted"
+        case denied = "Denied"
+        case notKnown = "Not Known"
+        case unclassified = "Unclassified"
+    }
+
+    var sentenceState: SentenceState {
+        get { SentenceState(rawValue: state ?? "") ?? .unclassified }
+        set { state = newValue.rawValue }
+    }
+}
 

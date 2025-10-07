@@ -11,7 +11,7 @@ final class PersistenceController {
     let container: NSPersistentContainer
 
     // 👉 Toggle this to true if you want a clean slate every launch
-    private let resetOnLaunch: Bool = true
+    private let resetOnLaunch: Bool = false
 
     private init(inMemory: Bool = false) {
         container = NSPersistentContainer(name: "ePleadingsMVP") // must match .xcdatamodeld
@@ -24,9 +24,16 @@ final class PersistenceController {
                 fatalError("❌ Unresolved Core Data error \(error), \(error.userInfo)")
             }
 
-            // 🔍 Debug: confirm entities that Core Data has loaded
+            // 💾 Show the live Core Data store location
+            if let storeURL = storeDescription.url {
+                print("💾 Core Data store path:", storeURL.path)
+            } else {
+                print("⚠️ No store URL found — using in-memory store?")
+            }
+
+            // 🔍 Debug: confirm entities Core Data has loaded
             for entity in self.container.managedObjectModel.entities {
-                print("📦 Loaded entity: \(entity.name ?? "nil")")
+                print("📦 Loaded entity:", entity.name ?? "nil")
             }
 
             // 👉 Reset store if flag is set
@@ -40,9 +47,9 @@ final class PersistenceController {
                                                                configurationName: nil,
                                                                at: url,
                                                                options: nil)
-                            print("🧹 Core Data store reset on launch")
+                            print("🧹 Core Data store reset on launch at:", url.path)
                         } catch {
-                            print("⚠️ Failed to reset store: \(error)")
+                            print("⚠️ Failed to reset store:", error)
                         }
                     }
                 }
@@ -71,12 +78,13 @@ extension PersistenceController {
         sentence.pageNumber = 1
         sentence.sourceFilename = "Dummy.docx"
         sentence.heading = heading
+        sentence.state = "new" // 👉 Added: test state assignment
 
         do {
             try context.save()
-            print("✅ Test heading + sentence saved to Core Data")
+            print("✅ Test heading + sentence saved to Core Data with state:", sentence.state ?? "nil") // 👉 Updated log
         } catch {
-            print("❌ Failed to save test data: \(error)")
+            print("❌ Failed to save test data:", error)
         }
     }
 
@@ -94,14 +102,15 @@ extension PersistenceController {
                 let page = s.pageNumber
                 let source = s.sourceFilename ?? "unknown"
                 let headingText = s.heading?.text ?? "(no heading)"
-                print("(\(index + 1)) ➡️ \(text) (page \(page), source: \(source), heading: \(headingText))")
+                let state = s.state ?? "(no state)" // 👉 Include state in logs
+                print("(\(index + 1)) ➡️ \(text) (page \(page), source: \(source), heading: \(headingText), state: \(state))")
             }
 
             if let limit = limit, results.count > limit {
                 print("… ⚠️ \(results.count - limit) more sentences not shown")
             }
         } catch {
-            print("⚠️ Failed to fetch sentences: \(error)")
+            print("⚠️ Failed to fetch sentences:", error)
         }
     }
 
@@ -128,7 +137,7 @@ extension PersistenceController {
                 print("… ⚠️ \(results.count - limit) more headings not shown")
             }
         } catch {
-            print("⚠️ Failed to fetch headings: \(error)")
+            print("⚠️ Failed to fetch headings:", error)
         }
     }
 
@@ -149,13 +158,14 @@ extension PersistenceController {
             sentence.pageNumber = Int32(i)
             sentence.sourceFilename = "Test.docx"
             sentence.heading = heading
+            sentence.state = "processed" // 👉 Added: set state explicitly for test
         }
 
         do {
             try context.save()
-            print("✅ Relationship test data saved")
+            print("✅ Relationship test data saved (state set to 'processed')") // 👉 Updated log
         } catch {
-            print("❌ Failed to save relationship test data: \(error)")
+            print("❌ Failed to save relationship test data:", error)
         }
 
         if let sentences = heading.sentences as? Set<SentenceEntity> {
@@ -165,7 +175,7 @@ extension PersistenceController {
         let fetch: NSFetchRequest<SentenceEntity> = SentenceEntity.fetchRequest()
         if let results = try? context.fetch(fetch) {
             for s in results {
-                print("➡️ '\(s.text ?? "nil")' belongs to heading '\(s.heading?.text ?? "nil")'")
+                print("➡️ '\(s.text ?? "nil")' belongs to heading '\(s.heading?.text ?? "nil")' [state: \(s.state ?? "nil")]") // 👉 include state
             }
         }
     }
@@ -180,9 +190,9 @@ extension PersistenceController {
         if !FileManager.default.fileExists(atPath: folder.path) {
             do {
                 try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-                print("📂 Created Cases folder at: \(folder.path)")
+                print("📂 Created Cases folder at:", folder.path)
             } catch {
-                print("⚠️ Failed to create Cases folder: \(error)")
+                print("⚠️ Failed to create Cases folder:", error)
             }
         }
 

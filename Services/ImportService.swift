@@ -85,6 +85,17 @@ final class ImportService: ObservableObject {
                 // 👉 Immediately map sentence bounding boxes (PDF only)
                 let mapper = SentenceMapperService()
                 mapper.mapSentences(in: document, using: context)
+                
+                // 👉 NEW: Tag all sentences created for this document as "new"
+                let updateRequest = NSBatchUpdateRequest(entityName: "SentenceEntity")
+                updateRequest.predicate = NSPredicate(format: "document == %@", document)
+                updateRequest.propertiesToUpdate = ["state": "new"]
+                updateRequest.resultType = .updatedObjectsCountResultType
+                if let result = try? context.execute(updateRequest) as? NSBatchUpdateResult {
+                    print("🟢 [\(callID)] Tagged \(result.result ?? 0) sentences as 'new' for \(document.filename ?? "?")")
+                }
+                
+                try context.save()
             }
             
             print("✅ [\(callID)] Imported \(document.filename ?? "?") into case: \(caseEntity.filename ?? "Unknown Case")")

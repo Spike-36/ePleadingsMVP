@@ -38,6 +38,7 @@
         <attribute name="mappedY" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
         <attribute name="pageNumber" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="sourceFilename" optional="YES" attributeType="String"/>
+        <attribute name="state" optional="YES" attributeType="String"/>
         <attribute name="text" optional="YES" attributeType="String"/>
         <relationship name="document" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="DocumentEntity" inverseName="sentences" inverseEntity="DocumentEntity"/>
         <relationship name="heading" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="HeadingEntity" inverseName="sentences" inverseEntity="HeadingEntity"/>

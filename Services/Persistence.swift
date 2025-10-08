@@ -20,16 +20,13 @@ final class PersistenceController {
         }
 
         container.loadPersistentStores { storeDescription, error in
-            // 👉 Added diagnostic line to show *exact* live database path
-            print("💾 Active Core Data store:", storeDescription.url?.path ?? "unknown")
-
             if let error = error as NSError? {
                 fatalError("❌ Unresolved Core Data error \(error), \(error.userInfo)")
             }
 
-            // 💾 Show the live Core Data store location
+            // 💾 Show the live Core Data store location (deduplicated)
             if let storeURL = storeDescription.url {
-                print("💾 Core Data store path:", storeURL.path)
+                print("💾 Active Core Data store:", storeURL.path)
             } else {
                 print("⚠️ No store URL found — using in-memory store?")
             }
@@ -81,11 +78,11 @@ extension PersistenceController {
         sentence.pageNumber = 1
         sentence.sourceFilename = "Dummy.docx"
         sentence.heading = heading
-        sentence.state = "new" // 👉 Added: test state assignment
+        sentence.state = "new"
 
         do {
             try context.save()
-            print("✅ Test heading + sentence saved to Core Data with state:", sentence.state ?? "nil") // 👉 Updated log
+            print("✅ Test heading + sentence saved to Core Data with state:", sentence.state ?? "nil")
         } catch {
             print("❌ Failed to save test data:", error)
         }
@@ -105,7 +102,7 @@ extension PersistenceController {
                 let page = s.pageNumber
                 let source = s.sourceFilename ?? "unknown"
                 let headingText = s.heading?.text ?? "(no heading)"
-                let state = s.state ?? "(no state)" // 👉 Include state in logs
+                let state = s.state ?? "(no state)"
                 print("(\(index + 1)) ➡️ \(text) (page \(page), source: \(source), heading: \(headingText), state: \(state))")
             }
 
@@ -132,7 +129,6 @@ extension PersistenceController {
                 let source = h.sourceFilename ?? "unknown"
                 let level = h.level
                 let sentenceCount = h.sentences?.count ?? 0
-
                 print("(\(index + 1)) ➡️ \(text) [level \(level)] — page: \(page) @ \(source) — sentences: \(sentenceCount)")
             }
 
@@ -161,12 +157,12 @@ extension PersistenceController {
             sentence.pageNumber = Int32(i)
             sentence.sourceFilename = "Test.docx"
             sentence.heading = heading
-            sentence.state = "processed" // 👉 Added: set state explicitly for test
+            sentence.state = "processed"
         }
 
         do {
             try context.save()
-            print("✅ Relationship test data saved (state set to 'processed')") // 👉 Updated log
+            print("✅ Relationship test data saved (state set to 'processed')")
         } catch {
             print("❌ Failed to save relationship test data:", error)
         }
@@ -178,9 +174,64 @@ extension PersistenceController {
         let fetch: NSFetchRequest<SentenceEntity> = SentenceEntity.fetchRequest()
         if let results = try? context.fetch(fetch) {
             for s in results {
-                print("➡️ '\(s.text ?? "nil")' belongs to heading '\(s.heading?.text ?? "nil")' [state: \(s.state ?? "nil")]") // 👉 include state
+                print("➡️ '\(s.text ?? "nil")' belongs to heading '\(s.heading?.text ?? "nil")' [state: \(s.state ?? "nil")]")
             }
         }
+    }
+
+    func debugCheckForOrphanDocuments() {
+        let context = container.viewContext
+        let fetchRequest: NSFetchRequest<DocumentEntity> = DocumentEntity.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "caseEntity == nil")
+
+        do {
+            let orphans = try context.fetch(fetchRequest)
+            if orphans.isEmpty {
+                print("✅ Sanity Check: No orphan documents found — all are linked to cases.")
+            } else {
+                print("⚠️ Found \(orphans.count) unlinked (orphan) documents:")
+                for doc in orphans {
+                    print("   • \(doc.filename ?? "Unnamed") — path: \(doc.filePath ?? "unknown")")
+                }
+            }
+        } catch {
+            print("❌ Failed to run orphan document check:", error)
+        }
+    }
+
+    func debugSummaryCounts() {
+        let context = container.viewContext
+        let entities = [
+            "CaseEntity",
+            "DocumentEntity",
+            "HeadingEntity",
+            "SentenceEntity"
+        ]
+
+        print("📊 Core Data summary:")
+        for entityName in entities {
+            let request = NSFetchRequest<NSFetchRequestResult>(entityName: entityName)
+            do {
+                let count = try context.count(for: request)
+                print("   • \(entityName.replacingOccurrences(of: "Entity", with: "")): \(count)")
+            } catch {
+                print("   ⚠️ Failed to count \(entityName): \(error)")
+            }
+        }
+
+        if let storeURL = container.persistentStoreDescriptions.first?.url {
+            do {
+                let attrs = try FileManager.default.attributesOfItem(atPath: storeURL.path)
+                if let size = attrs[.size] as? NSNumber {
+                    let kb = Double(truncating: size) / 1024.0
+                    print(String(format: "💽 SQLite store size: %.1f KB", kb))
+                }
+            } catch {
+                print("⚠️ Unable to get SQLite file size:", error)
+            }
+        }
+
+        print("") // spacing line
     }
 }
 

@@ -60,7 +60,11 @@ final class ImportService: ObservableObject {
             document.createdAt = Date()
             document.filename = pickedURL.lastPathComponent
             document.filePath = copiedURL.path
-            document.caseEntity = caseEntity   // link back to the case
+            document.caseEntity = caseEntity   // ✅ critical: link back to the case
+            
+            // 👉 Diagnostic: confirm linkage before parsing
+            let caseName = caseEntity.filename ?? "Unnamed Case"
+            print("🧭 [\(callID)] Document \(document.filename ?? "?") correctly linked to case '\(caseName)'")
             
             // 👉 Handle DOCX or PDF
             if copiedURL.pathExtension.lowercased() == "docx" {
@@ -82,11 +86,32 @@ final class ImportService: ObservableObject {
                 heading.document = document
                 try context.save()
                 
+                // 👉 Defensive check: ensure linkage before mapping
+                if document.caseEntity == nil {
+                    document.caseEntity = caseEntity
+                    print("🩹 [\(callID)] Repaired missing caseEntity link before mapping sentences.")
+                }
+                
                 // 👉 Immediately map sentence bounding boxes (PDF only)
                 let mapper = SentenceMapperService()
                 mapper.mapSentences(in: document, using: context)
                 
-                // 👉 NEW: Tag all sentences created for this document as "new"
+                // 👉 Post-mapping diagnostic
+                if document.caseEntity == nil {
+                    print("⚠️ [\(callID)] Document \(document.filename ?? "?") missing caseEntity link before sentence mapping.")
+                } else {
+                    print("🧭 [\(callID)] Sentences will map to case: \(document.caseEntity?.filename ?? "Unknown Case")")
+                }
+                
+                // 👉 Verify sentence count for this document
+                let fetch: NSFetchRequest<SentenceEntity> = SentenceEntity.fetchRequest()
+                fetch.predicate = NSPredicate(format: "document == %@", document)
+                if let sentences = try? context.fetch(fetch) {
+                    let caseName = document.caseEntity?.filename ?? "Unknown"
+                    print("🧩 [\(callID)] \(sentences.count) sentences now indirectly linked to case '\(caseName)'")
+                }
+                
+                // 👉 Tag all sentences created for this document as "new"
                 let updateRequest = NSBatchUpdateRequest(entityName: "SentenceEntity")
                 updateRequest.predicate = NSPredicate(format: "document == %@", document)
                 updateRequest.propertiesToUpdate = ["state": "new"]
@@ -99,6 +124,13 @@ final class ImportService: ObservableObject {
             }
             
             print("✅ [\(callID)] Imported \(document.filename ?? "?") into case: \(caseEntity.filename ?? "Unknown Case")")
+
+            // 👉 Post-import sanity check
+            #if DEBUG
+            print("🧩 [\(callID)] Running orphan document check after import...")
+            PersistenceController.shared.debugCheckForOrphanDocuments()
+            #endif
+            
             return document
         } catch {
             print("❌ [\(callID)] Failed to import file: \(error)")

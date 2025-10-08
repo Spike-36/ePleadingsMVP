@@ -16,10 +16,18 @@ struct ePleadingsMVPApp: App {
                 .environment(\.managedObjectContext,
                              persistenceController.container.viewContext)
                 .onAppear {
-                    // Debug: prove Core Data is live
-                    persistenceController.runRelationshipTest()
-                    persistenceController.debugPrintHeadings()
-                    persistenceController.debugPrintSentences()
+                    #if DEBUG
+                    // 🧩 Debug: confirm Core Data wiring is intact
+                    print("🔍 Running Core Data integrity checks on launch...")
+                    
+                    // 🔄 Quick entity count summary
+                    persistenceController.debugSummaryCounts()
+                    
+                    // 👉 Check for orphaned documents
+                    persistenceController.debugCheckForOrphanDocuments()
+                    
+                    print("✅ Relationship and orphan checks complete.\n")
+                    #endif
                 }
         }
     }

@@ -28,6 +28,9 @@ final class HeadingToPageMapper {
     func mapHeadings(_ headings: [HeadingEntity]) {
         print("📑 Mapping \(headings.count) heading(s) across \(pdfDocument.pageCount) page(s).")
 
+        var mappedCount = 0
+        var notFoundCount = 0
+
         for heading in headings {
             guard let text = heading.text, !text.isEmpty else { continue }
 
@@ -37,16 +40,19 @@ final class HeadingToPageMapper {
                 heading.mappedY = Double(bounds.origin.y)
                 heading.mappedWidth = Double(bounds.width)
                 heading.mappedHeight = Double(bounds.height)
-                print("✅ '\(text)' → page \(pageIndex + 1) @ \(bounds.integral)")
+                mappedCount += 1
+                // 🔇 Verbose log removed:
+                // print("✅ '\(text)' → page \(pageIndex + 1) @ \(bounds.integral)")
             } else {
-                // Leave existing values; just log not found
-                print("⚠️ Not found in PDF: '\(text)'")
+                notFoundCount += 1
+                // 🔇 Verbose log removed:
+                // print("⚠️ Not found in PDF: '\(text)'")
             }
         }
 
         do {
             try context.save()
-            print("💾 Saved heading mappings.")
+            print("💾 Saved heading mappings. ✅ \(mappedCount) mapped, ⚠️ \(notFoundCount) not found.")
         } catch {
             print("❌ Failed to save heading mappings: \(error)")
         }
@@ -68,9 +74,9 @@ final class HeadingToPageMapper {
                     return (i, sel.bounds(for: page))
                 }
             } else {
-                // 🔍 Debug log: show normalized heading + snippet of the haystack
-                let snippet = haystack.prefix(200).replacingOccurrences(of: "\n", with: "⏎")
-                print("   [p\(i+1)] Searching for '\(needle)' not found in first 200 chars: \(snippet)…")
+                // 🔇 Suppressed verbose "searching" logs
+                // let snippet = haystack.prefix(200).replacingOccurrences(of: "\n", with: "⏎")
+                // print("   [p\(i+1)] Searching for '\(needle)' not found in first 200 chars: \(snippet)…")
             }
         }
         return nil
@@ -87,5 +93,4 @@ final class HeadingToPageMapper {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
-
 

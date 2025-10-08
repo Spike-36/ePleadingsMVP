@@ -15,12 +15,13 @@ final class SentenceMapperService {
 
     /// Finds and records bounding boxes for each sentence belonging to a given document.
     func mapSentences(in document: DocumentEntity, using context: NSManagedObjectContext) {
-        print("📄 Starting SentenceMapper for \(document.filename)")
+        let docName = document.filename ?? "Unknown Document"
+        print("📄 Starting SentenceMapper for \(docName)")
 
         // ✅ Open the PDF for this document
         guard let path = document.filePath,
               let pdfDoc = PDFDocument(url: URL(fileURLWithPath: path)) else {
-            print("❌ SentenceMapper: Unable to open PDF for \(document.filename)")
+            print("❌ SentenceMapper: Unable to open PDF for \(docName)")
             return
         }
 
@@ -42,11 +43,10 @@ final class SentenceMapperService {
             // ✅ For each sentence, attempt to locate its bounding boxes
             for sentenceText in sentences {
                 guard let range = pageText.range(of: sentenceText) else { continue }
-
                 let nsRange = NSRange(range, in: pageText)
                 guard let selection = page.selection(for: nsRange) else { continue }
 
-                // 🟩 Phase 6.6: Multi-line bounding boxes
+                // 🟩 Multi-line bounding boxes
                 let lineSelections = selection.selectionsByLine()
                 let rects = lineSelections.map { $0.bounds(for: page) }
                 guard !rects.isEmpty else { continue }
@@ -57,7 +57,7 @@ final class SentenceMapperService {
                 sentence.text = sentenceText
                 sentence.pageNumber = Int32(pageIndex + 1)
                 sentence.sourceFilename = document.filename
-                sentence.document = document
+                sentence.document = document  // ← link only to the document
 
                 // 🟢 Store all rectangles in Core Data
                 sentence.rects = rects
@@ -71,14 +71,17 @@ final class SentenceMapperService {
                 }
 
                 mappedCount += 1
-                print("✅ Mapped sentence (\(rects.count) rects) on page \(sentence.pageNumber): \(sentenceText.prefix(40))…")
+                print("✅ Mapped sentence (\(rects.count) rects) on page \(sentence.pageNumber) in '\(docName)': \(sentenceText.prefix(40))…")
             }
         }
 
         // ✅ Save mapped sentences
         do {
-            try context.save()
-            print("💾 SentenceMapper: \(mappedCount) sentences mapped and saved.")
+            if context.hasChanges {
+                try context.save()
+            }
+            let caseLabel = document.caseEntity?.filename ?? "—"
+            print("💾 SentenceMapper: \(mappedCount) sentences saved for '\(docName)' (case: \(caseLabel)).")
         } catch {
             print("❌ SentenceMapper error: \(error)")
         }

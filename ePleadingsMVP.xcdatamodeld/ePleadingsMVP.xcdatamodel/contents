@@ -13,7 +13,7 @@
         <attribute name="id" attributeType="UUID" usesScalarValueType="NO"/>
         <relationship name="caseEntity" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CaseEntity" inverseName="documents" inverseEntity="CaseEntity"/>
         <relationship name="headings" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="HeadingEntity" inverseName="document" inverseEntity="HeadingEntity"/>
-        <relationship name="sentences" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="SentenceEntity" inverseName="document" inverseEntity="SentenceEntity"/>
+        <relationship name="sentences" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="SentenceEntity" inverseName="document" inverseEntity="SentenceEntity"/>
     </entity>
     <entity name="HeadingEntity" representedClassName="ePleadingsMVP.HeadingEntity" syncable="YES">
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>

@@ -20,6 +20,9 @@ final class PersistenceController {
         }
 
         container.loadPersistentStores { storeDescription, error in
+            // 👉 Added diagnostic line to show *exact* live database path
+            print("💾 Active Core Data store:", storeDescription.url?.path ?? "unknown")
+
             if let error = error as NSError? {
                 fatalError("❌ Unresolved Core Data error \(error), \(error.userInfo)")
             }

@@ -1,3 +1,10 @@
+//
+//  InteractivePDFView.swift
+//  ePleadingsMVP
+//
+//  Created by Peter Milligan on 07/10/2025.
+//
+
 import PDFKit
 import SwiftUI
 import CoreData
@@ -67,6 +74,12 @@ final class InteractivePDFView: PDFView {
         do {
             try context.save()
             Swift.print("✅ Marked “\(s.text ?? "(unknown)")” as \(newState)")
+
+            // 👉 Trigger highlight refresh immediately after tagging
+            if let sourceFilename = s.sourceFilename {
+                self.refreshHighlights(for: sourceFilename, context: context) // 🔄 live update
+            }
+
         } catch {
             Swift.print("❌ Failed to save state: \(error)")
         }

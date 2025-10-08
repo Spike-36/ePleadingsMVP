@@ -39,31 +39,39 @@ final class SentenceMapperService {
                 .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
                 .filter { !$0.isEmpty }
 
-            // ✅ For each sentence, attempt to locate its bounding box
+            // ✅ For each sentence, attempt to locate its bounding boxes
             for sentenceText in sentences {
                 guard let range = pageText.range(of: sentenceText) else { continue }
 
-                // Create a PDFSelection for this text range
                 let nsRange = NSRange(range, in: pageText)
                 guard let selection = page.selection(for: nsRange) else { continue }
 
-                // Get the bounding box for the selection on this page
-                let rect = selection.bounds(for: page)
+                // 🟩 Phase 6.6: Multi-line bounding boxes
+                let lineSelections = selection.selectionsByLine()
+                let rects = lineSelections.map { $0.bounds(for: page) }
+                guard !rects.isEmpty else { continue }
 
                 // ✅ Create and populate a new SentenceEntity
                 let sentence = SentenceEntity(context: context)
                 sentence.id = UUID()
                 sentence.text = sentenceText
                 sentence.pageNumber = Int32(pageIndex + 1)
-                sentence.mappedX = Double(rect.origin.x)
-                sentence.mappedY = Double(rect.origin.y)
-                sentence.mappedWidth = Double(rect.size.width)
-                sentence.mappedHeight = Double(rect.size.height)
                 sentence.sourceFilename = document.filename
                 sentence.document = document
 
+                // 🟢 Store all rectangles in Core Data
+                sentence.rects = rects
+
+                // 🧩 Keep first rect for legacy single-rect compatibility
+                if let first = rects.first {
+                    sentence.mappedX = Double(first.origin.x)
+                    sentence.mappedY = Double(first.origin.y)
+                    sentence.mappedWidth = Double(first.size.width)
+                    sentence.mappedHeight = Double(first.size.height)
+                }
+
                 mappedCount += 1
-                print("✅ Mapped sentence on page \(sentence.pageNumber): \(sentenceText.prefix(40))…")
+                print("✅ Mapped sentence (\(rects.count) rects) on page \(sentence.pageNumber): \(sentenceText.prefix(40))…")
             }
         }
 

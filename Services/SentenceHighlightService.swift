@@ -2,9 +2,10 @@
 //  SentenceHighlightService.swift
 //  ePleadingsMVP
 //
-//  Updated: 09/10/2025 —
-//  • Removed redundant case parameter (now uses document→case relationship)
-//  • Keeps rect sanity + short-text filters
+//  Updated: 10/10/2025 — Fix 1 (pure object-based predicate)
+//  ✅ Removed all filename/path matching
+//  ✅ Fetches sentences by `document == %@` only
+//  ✅ Keeps rect sanity + short-text filters intact
 //
 
 import Foundation
@@ -14,23 +15,20 @@ import SwiftUI
 
 final class SentenceHighlightService {
 
-    // 🔄 Removed `for caseEntity` parameter — no longer needed
+    // ✅ Signature now takes the actual DocumentEntity
     static func applyHighlights(to pdfView: PDFView,
-                                sourceFilename: String,
+                                for document: DocumentEntity,
                                 context: NSManagedObjectContext) {
-        print("🟡 SentenceHighlightService: applying highlights for \(sourceFilename)")
 
-        // ✅ Match by base filename (test.3.3.docx ↔ test.3.3.pdf)
-        let baseName = (sourceFilename as NSString).deletingPathExtension
+        let name = document.filename ?? "Unknown"
+        print("🟡 SentenceHighlightService: applying highlights for \(name)")
+
+        // ✅ Fetch only sentences linked to this exact document
         let fetch: NSFetchRequest<SentenceEntity> = SentenceEntity.fetchRequest()
-
-        // 🔄 Predicate simplified — we rely on document→caseEntity relationship now
-        fetch.predicate = NSPredicate(
-            format: "sourceFilename BEGINSWITH[cd] %@", baseName
-        )
+        fetch.predicate = NSPredicate(format: "document == %@", document)
 
         guard let sentences = try? context.fetch(fetch), !sentences.isEmpty else {
-            print("⚠️ No mapped sentences found for \(sourceFilename)")
+            print("⚠️ No mapped sentences found for \(name)")
             return
         }
 
@@ -99,6 +97,7 @@ final class SentenceHighlightService {
         case .denied:       return NSColor.systemRed.withAlphaComponent(0.3)
         case .notKnown:     return NSColor.systemYellow.withAlphaComponent(0.3)
         case .unclassified: return .clear
+        @unknown default:   return .clear
         }
     }
 }

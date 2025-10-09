@@ -3,9 +3,10 @@
 //  ePleadingsMVP
 //
 //  Created by Peter Milligan on 07/10/2025.
-//  Updated 09/10/2025 — Restored custom right-click tagging menu
-//  • Disabled PDFKit’s default contextual menu
-//  • Verified highlight refresh + Core Data sync
+//  Updated 10/10/2025 — fully object-based highlight refresh
+//  ✅ Replaced filename-based refresh with DocumentEntity reference
+//  ✅ Consistent Core Data predicate use (document == %@)
+//  ✅ Disabled PDFKit’s default context menu
 //
 
 import PDFKit
@@ -24,13 +25,11 @@ final class InteractivePDFView: PDFView {
 
     // MARK: - Mouse Handling
 
-    // Disable PDFKit’s default right-click context menu
     override func menu(for event: NSEvent) -> NSMenu? {
         // 🧩 Returning nil suppresses PDFKit’s built-in menu entirely
         return nil
     }
 
-    // Handle left or control-click
     override func mouseDown(with event: NSEvent) {
         // Treat Control + Left Click as Right Click
         if event.modifierFlags.contains(.control) {
@@ -44,14 +43,12 @@ final class InteractivePDFView: PDFView {
         onLeftClick?(pageNumber, point)
     }
 
-    // Handle actual right-click → show tagging menu
     override func rightMouseDown(with event: NSEvent) {
         guard let page = self.page(for: event.locationInWindow, nearest: true) else { return }
         let point = self.convert(event.locationInWindow, to: page)
         let pageNumber = page.label.flatMap { Int($0) } ?? 0
         onRightClick?(pageNumber, point)
 
-        // 👉 Lookup nearest sentence (temporary simple version)
         if let s = findNearestSentence(pageNumber: pageNumber, point: point) {
             lastClickedSentence = s
         } else {
@@ -81,14 +78,17 @@ final class InteractivePDFView: PDFView {
             Swift.print("⚠️ No sentence/context available for tagging.")
             return
         }
+
         s.state = newState
         do {
             try context.save()
             Swift.print("✅ Marked “\(s.text ?? "(unknown)")” as \(newState)")
 
-            // 👉 Trigger highlight refresh immediately after tagging
-            if let sourceFilename = s.sourceFilename {
-                self.refreshHighlights(for: sourceFilename, context: context)
+            // ✅ NEW — trigger highlight refresh using linked DocumentEntity
+            if let document = s.document {
+                self.refreshHighlights(for: document, context: context)
+            } else {
+                Swift.print("⚠️ No DocumentEntity linked to sentence.")
             }
 
         } catch {
@@ -106,7 +106,6 @@ final class InteractivePDFView: PDFView {
             let candidates = try context.fetch(request)
             guard !candidates.isEmpty else { return nil }
 
-            // Find closest centre by Euclidean distance
             var best: SentenceEntity?
             var bestDist = CGFloat.greatestFiniteMagnitude
             for s in candidates {
@@ -127,39 +126,39 @@ final class InteractivePDFView: PDFView {
         }
     }
 
-    // Explicit scroll helper for annotation jumps etc.
     func scrollTo(page: PDFPage, rect: CGRect) {
         self.go(to: rect, on: page)
     }
 }
 
-// MARK: - Live Highlight Refresh
+// MARK: - Live Highlight Refresh (object-based)
 extension InteractivePDFView {
 
     /// Removes all existing highlights and reapplies updated ones from Core Data.
-    func refreshHighlights(for sourceFilename: String, context: NSManagedObjectContext) {
-        guard let document = self.document else {
+    func refreshHighlights(for document: DocumentEntity,
+                           context: NSManagedObjectContext) {
+        guard let pdfDocument = self.document else {
             Swift.print("⚠️ refreshHighlights: No PDF document loaded.")
             return
         }
 
         // 🧹 Remove all existing highlight annotations
-        for i in 0..<document.pageCount {
-            guard let page = document.page(at: i) else { continue }
+        for i in 0..<pdfDocument.pageCount {
+            guard let page = pdfDocument.page(at: i) else { continue }
             let oldHighlights = page.annotations.filter {
                 $0.type == PDFAnnotationSubtype.highlight.rawValue
             }
             oldHighlights.forEach { page.removeAnnotation($0) }
         }
 
-        // 🔄 Reapply updated highlights (no case param)
+        // 🔄 Reapply updated highlights via SentenceHighlightService
         SentenceHighlightService.applyHighlights(
             to: self,
-            sourceFilename: sourceFilename,
+            for: document,
             context: context
         )
 
-        Swift.print("🔁 InteractivePDFView: highlights refreshed for \(sourceFilename)")
+        Swift.print("🔁 InteractivePDFView: highlights refreshed for \(document.filename ?? "(unknown)")")
     }
 }
 

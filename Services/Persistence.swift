@@ -4,6 +4,7 @@
 //
 
 import CoreData
+import SQLite3   // ✅ for manual VACUUM compaction
 
 final class PersistenceController {
     static let shared = PersistenceController()
@@ -104,23 +105,79 @@ extension PersistenceController {
         }
     }
 
+    // 🔄 Updated — now cleans orphaned DocumentEntity + SentenceEntity safely
     func debugCheckForOrphanDocuments() {
         let context = container.viewContext
-        let fetchRequest: NSFetchRequest<DocumentEntity> = DocumentEntity.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: "caseEntity == nil")
+        print("🔍 Running Core Data integrity checks on launch...")
+
+        // --- Summary counts (for context) ---
+        let entities = ["CaseEntity", "DocumentEntity", "HeadingEntity", "SentenceEntity"]
+        for e in entities {
+            let req = NSFetchRequest<NSFetchRequestResult>(entityName: e)
+            let count = (try? context.count(for: req)) ?? 0
+            print("📦 \(e.replacingOccurrences(of: "Entity", with: "")): \(count)")
+        }
+
+        var didDeleteSomething = false
+
+        // --- Orphan Document cleanup ---
+        let fetchDocs: NSFetchRequest<DocumentEntity> = DocumentEntity.fetchRequest()
+        fetchDocs.predicate = NSPredicate(format: "caseEntity == nil")
+
         do {
-            let orphans = try context.fetch(fetchRequest)
+            let orphans = try context.fetch(fetchDocs)
             if orphans.isEmpty {
-                print("✅ Sanity Check: No orphan documents found — all are linked to cases.")
+                print("✅ No orphaned DocumentEntity records found.")
             } else {
                 print("⚠️ Found \(orphans.count) unlinked (orphan) documents:")
                 for doc in orphans {
-                    print("   • \(doc.filename ?? "Unnamed") — path: \(doc.filePath ?? "unknown")")
+                    print("   • \(doc.filename ?? "(unknown)") — path: \(doc.filePath ?? "nil")")
+                    context.delete(doc)
                 }
+                try context.save()
+                didDeleteSomething = true
+                print("🧹 Deleted \(orphans.count) orphaned documents and saved context.")
             }
         } catch {
-            print("❌ Failed to run orphan document check:", error)
+            print("❌ Failed to scan or clean orphaned documents: \(error)")
         }
+
+        // --- Orphan Sentence cleanup ---
+        let fetchSentences: NSFetchRequest<SentenceEntity> = SentenceEntity.fetchRequest()
+        fetchSentences.predicate = NSPredicate(format: "document == nil")
+        do {
+            let orphans = try context.fetch(fetchSentences)
+            if orphans.isEmpty {
+                print("✅ No orphaned SentenceEntity records found.")
+            } else {
+                print("⚠️ Found \(orphans.count) orphaned sentences (no linked document):")
+                for s in orphans.prefix(10) {
+                    print("   • '\(s.text ?? "(no text)")' — page: \(s.pageNumber)")
+                    context.delete(s)
+                }
+                try context.save()
+                didDeleteSomething = true
+                print("🧹 Deleted \(orphans.count) orphaned SentenceEntity records.")
+            }
+        } catch {
+            print("❌ Failed to scan or clean orphaned sentences: \(error)")
+        }
+
+        // --- Compact only if we actually deleted data ---
+        if didDeleteSomething {
+            self.compactStore()
+        }
+
+        // --- Store file size diagnostics ---
+        if let storeURL = container.persistentStoreDescriptions.first?.url {
+            if let attrs = try? FileManager.default.attributesOfItem(atPath: storeURL.path),
+               let size = attrs[.size] as? NSNumber {
+                let kb = Double(truncating: size) / 1024.0
+                print(String(format: "💽 SQLite store size: %.1f KB", kb))
+            }
+        }
+
+        print("✅ Relationship and orphan checks complete.")
     }
 
     func debugSummaryCounts() {
@@ -149,6 +206,29 @@ extension PersistenceController {
             }
         }
         print("")
+    }
+}
+
+// MARK: - Store maintenance
+extension PersistenceController {
+    /// Physically compacts the SQLite store after deletions.
+    func compactStore() {
+        guard let storeURL = container.persistentStoreDescriptions.first?.url else {
+            print("⚠️ compactStore: No store URL found.")
+            return
+        }
+
+        var db: OpaquePointer?
+        if sqlite3_open(storeURL.path, &db) == SQLITE_OK {
+            if sqlite3_exec(db, "VACUUM;", nil, nil, nil) == SQLITE_OK {
+                print("🧩 SQLite store compacted successfully.")
+            } else {
+                print("⚠️ SQLite VACUUM command failed.")
+            }
+            sqlite3_close(db)
+        } else {
+            print("⚠️ Unable to open database for compaction.")
+        }
     }
 }
 

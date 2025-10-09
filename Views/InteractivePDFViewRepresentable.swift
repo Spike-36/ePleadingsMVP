@@ -3,7 +3,9 @@
 //  ePleadingsMVP
 //
 //  Created by Peter Milligan on 07/10/2025.
-//  Updated: 09/10/2025 — Fixed compile errors, removed redundant case parameter, and ensured safe AppKit color usage.
+//  Updated 10/10/2025 — fixed Core Data context reference (self.context)
+//  ✅ Uses self.context.fetch(fetch) instead of SwiftUI context
+//  ✅ Calls object-based highlight predicate
 //
 
 import SwiftUI
@@ -13,7 +15,7 @@ import CoreData
 struct InteractivePDFViewRepresentable: NSViewRepresentable {
     let url: URL?
     let context: NSManagedObjectContext
-    let caseEntity: CaseEntity   // ✅ active case reference (kept for future use if needed)
+    let caseEntity: CaseEntity   // ✅ active case reference (kept for future use)
 
     func makeNSView(context: Context) -> PDFView {
         let pdfView = InteractivePDFView()
@@ -33,12 +35,20 @@ struct InteractivePDFViewRepresentable: NSViewRepresentable {
             pdfView.document = PDFDocument(url: url)
             let filename = url.lastPathComponent
 
-            // 🔄 Updated — removed obsolete `for:` argument
-            SentenceHighlightService.applyHighlights(
-                to: pdfView,
-                sourceFilename: filename,
-                context: self.context
-            )
+            // 🆕 Lookup DocumentEntity and apply highlights via object-based predicate
+            let fetch: NSFetchRequest<DocumentEntity> = DocumentEntity.fetchRequest()
+            fetch.predicate = NSPredicate(format: "filename == %@", filename)
+
+            // ✅ FIX: Use self.context (Core Data), not the SwiftUI `context`
+            if let doc = try? self.context.fetch(fetch).first {
+                SentenceHighlightService.applyHighlights(
+                    to: pdfView,
+                    for: doc,
+                    context: self.context
+                )
+            } else {
+                Swift.print("⚠️ No DocumentEntity found for \(filename)")
+            }
         }
 
         // Attach click handlers
@@ -61,7 +71,6 @@ struct InteractivePDFViewRepresentable: NSViewRepresentable {
         Coordinator(self)
     }
 
-    // MARK: - Coordinator
     class Coordinator {
         var parent: InteractivePDFViewRepresentable
 

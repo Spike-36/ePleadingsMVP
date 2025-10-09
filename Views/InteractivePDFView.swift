@@ -3,6 +3,7 @@
 //  ePleadingsMVP
 //
 //  Created by Peter Milligan on 07/10/2025.
+//  Updated 09/10/2025 — added live highlight refresh support.
 //
 
 import PDFKit
@@ -119,6 +120,34 @@ final class InteractivePDFView: PDFView {
     // Explicit scroll helper for annotation jumps etc.
     func scrollTo(page: PDFPage, rect: CGRect) {
         self.go(to: rect, on: page)
+    }
+}
+
+// MARK: - Live Highlight Refresh
+extension InteractivePDFView {
+
+    /// Removes all existing highlights and reapplies updated ones from Core Data.
+    func refreshHighlights(for sourceFilename: String, context: NSManagedObjectContext) {
+        guard let document = self.document else {
+            Swift.print("⚠️ refreshHighlights: No PDF document loaded.")
+            return
+        }
+
+        // 🧹 Remove all existing highlight annotations
+        for i in 0..<document.pageCount {
+            guard let page = document.page(at: i) else { continue }
+            let oldHighlights = page.annotations.filter {
+                $0.type == PDFAnnotationSubtype.highlight.rawValue
+            }
+            oldHighlights.forEach { page.removeAnnotation($0) }
+        }
+
+        // 🎯 Reapply updated highlights via SentenceHighlightService
+        SentenceHighlightService.applyHighlights(to: self,
+                                                 sourceFilename: sourceFilename,
+                                                 context: context)
+
+        Swift.print("🔁 InteractivePDFView: highlights refreshed for \(sourceFilename)")
     }
 }
 

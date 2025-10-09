@@ -2,8 +2,10 @@
 //  SentenceHighlightService.swift
 //  ePleadingsMVP
 //
-//  Created by Peter Milligan on 07/10/2025.
-//  Updated 08/10/2025: multi-rect support for precise sentence highlights.
+//  Updated: 09/10/2025 —
+//  • Added filters for short / heading text (Stage 4 ghost prevention)
+//  • Added rect sanity checks
+//  • Fixed filename predicate to match DOCX/PDF by base name
 //
 
 import Foundation
@@ -11,35 +13,49 @@ import PDFKit
 import CoreData
 import SwiftUI
 
-/// Applies colored highlights to PDF pages based on SentenceEntity mappings.
 final class SentenceHighlightService {
 
-    /// Adds highlights to the given PDFView for a specific document filename.
     static func applyHighlights(to pdfView: PDFView,
                                 sourceFilename: String,
                                 context: NSManagedObjectContext) {
-        Swift.print("🟡 SentenceHighlightService: applying highlights for \(sourceFilename)")
+        print("🟡 SentenceHighlightService: applying highlights for \(sourceFilename)")
 
-        // ✅ Fetch all mapped sentences for this file
+        // ✅ Match by base filename (test.3.3.docx ↔ test.3.3.pdf)
+        let baseName = (sourceFilename as NSString).deletingPathExtension
         let fetch: NSFetchRequest<SentenceEntity> = SentenceEntity.fetchRequest()
-        fetch.predicate = NSPredicate(format: "sourceFilename == %@", sourceFilename)
+        fetch.predicate = NSPredicate(format: "sourceFilename BEGINSWITH[cd] %@", baseName)
 
         guard let sentences = try? context.fetch(fetch), !sentences.isEmpty else {
-            Swift.print("⚠️ No mapped sentences found for \(sourceFilename)")
+            print("⚠️ No mapped sentences found for \(sourceFilename)")
             return
         }
 
-        // ✅ Group by page for efficiency
         let grouped = Dictionary(grouping: sentences, by: { Int($0.pageNumber) })
+        var applied = 0
+        var skipped = 0
 
         for (pageNum, items) in grouped {
             guard let page = pdfView.document?.page(at: pageNum - 1) else { continue }
 
             for sentence in items {
-                // Skip unclassified (no gray boxes)
-                if sentence.sentenceState == .unclassified { continue }
+                let text = sentence.text.trimmingCharacters(in: .whitespacesAndNewlines)
 
-                // 👉 Use multiple rects if available, fallback to single
+                // 🟡 Skip junk or headings
+                guard text.count >= 5 else {
+                    skipped += 1
+                    print("⚙️ Ignored short text: '\(text)'")
+                    continue
+                }
+
+                if sentence.heading == nil,
+                   text.range(of: #"^(statement|answer|cond|admit)[\s\d:\-]*$"#,
+                              options: [.regularExpression, .caseInsensitive]) != nil {
+                    skipped += 1
+                    print("⚙️ Ignored heading-like text: '\(text)'")
+                    continue
+                }
+
+                // ✅ Use multi-rect support
                 let rects = sentence.rects.isEmpty
                     ? [CGRect(x: sentence.mappedX,
                               y: sentence.mappedY,
@@ -48,58 +64,38 @@ final class SentenceHighlightService {
                     : sentence.rects
 
                 for rect in rects {
+                    guard rect.width > 1, rect.height > 1,
+                          rect.origin.x >= 0, rect.origin.y >= 0 else {
+                        print("⚙️ Ignored invalid rect:", rect)
+                        skipped += 1
+                        continue
+                    }
+
                     let annotation = PDFAnnotation(bounds: rect,
                                                    forType: .highlight,
                                                    withProperties: nil)
                     annotation.color = color(for: sentence.sentenceState)
-                    annotation.contents = sentence.text
+                    annotation.contents = text
                     page.addAnnotation(annotation)
+                    applied += 1
                 }
             }
 
-            Swift.print("✅ Applied \(items.count) sentence highlights on page \(pageNum)")
+            print("✅ Applied \(applied) valid highlights on page \(pageNum)")
         }
 
         pdfView.setNeedsDisplay(pdfView.bounds)
+        print("🔎 Highlight summary — applied: \(applied), skipped: \(skipped)")
     }
 
     // MARK: - Color Mapping
     private static func color(for state: SentenceEntity.SentenceState) -> NSColor {
         switch state {
-        case .admitted:
-            return NSColor.systemGreen.withAlphaComponent(0.3)
-        case .denied:
-            return NSColor.systemRed.withAlphaComponent(0.3)
-        case .notKnown:
-            return NSColor.systemYellow.withAlphaComponent(0.3)
-        case .unclassified:
-            return .clear // ✅ no gray debug boxes
+        case .admitted:     return NSColor.systemGreen.withAlphaComponent(0.3)
+        case .denied:       return NSColor.systemRed.withAlphaComponent(0.3)
+        case .notKnown:     return NSColor.systemYellow.withAlphaComponent(0.3)
+        case .unclassified: return .clear
         }
-    }
-}
-
-// MARK: - PDFView Extension for Live Refresh
-extension PDFView {
-
-    /// Removes all old highlights and reapplies new ones from Core Data.
-    func refreshHighlights(for sourceFilename: String, context: NSManagedObjectContext) {
-        guard let document = self.document else { return }
-
-        // 🔄 Remove existing highlight annotations
-        for i in 0 ..< document.pageCount {
-            guard let page = document.page(at: i) else { continue }
-            let oldHighlights = page.annotations.filter {
-                $0.type == PDFAnnotationSubtype.highlight.rawValue
-            }
-            oldHighlights.forEach { page.removeAnnotation($0) }
-        }
-
-        // 🟢 Reapply highlights
-        SentenceHighlightService.applyHighlights(to: self,
-                                                 sourceFilename: sourceFilename,
-                                                 context: context)
-
-        Swift.print("🔁 PDFView highlights refreshed for \(sourceFilename)")
     }
 }
 

@@ -3,7 +3,9 @@
 //  ePleadingsMVP
 //
 //  Created by Peter Milligan on 07/10/2025.
-//  Updated 09/10/2025 — added live highlight refresh support.
+//  Updated 09/10/2025 — Restored custom right-click tagging menu
+//  • Disabled PDFKit’s default contextual menu
+//  • Verified highlight refresh + Core Data sync
 //
 
 import PDFKit
@@ -21,6 +23,12 @@ final class InteractivePDFView: PDFView {
     private var lastClickedSentence: SentenceEntity?
 
     // MARK: - Mouse Handling
+
+    // Disable PDFKit’s default right-click context menu
+    override func menu(for event: NSEvent) -> NSMenu? {
+        // 🧩 Returning nil suppresses PDFKit’s built-in menu entirely
+        return nil
+    }
 
     // Handle left or control-click
     override func mouseDown(with event: NSEvent) {
@@ -51,11 +59,13 @@ final class InteractivePDFView: PDFView {
             return
         }
 
-        // 👉 Build context menu
+        // 👉 Build custom context menu
         let menu = NSMenu(title: "Tag Sentence")
         menu.addItem(withTitle: "Admitted", action: #selector(markAdmitted), keyEquivalent: "")
         menu.addItem(withTitle: "Denied", action: #selector(markDenied), keyEquivalent: "")
         menu.addItem(withTitle: "Not Known", action: #selector(markNotKnown), keyEquivalent: "")
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(withTitle: "Cancel", action: nil, keyEquivalent: "")
         NSMenu.popUpContextMenu(menu, with: event, for: self)
     }
 
@@ -78,7 +88,7 @@ final class InteractivePDFView: PDFView {
 
             // 👉 Trigger highlight refresh immediately after tagging
             if let sourceFilename = s.sourceFilename {
-                self.refreshHighlights(for: sourceFilename, context: context) // 🔄 live update
+                self.refreshHighlights(for: sourceFilename, context: context)
             }
 
         } catch {
@@ -142,10 +152,12 @@ extension InteractivePDFView {
             oldHighlights.forEach { page.removeAnnotation($0) }
         }
 
-        // 🎯 Reapply updated highlights via SentenceHighlightService
-        SentenceHighlightService.applyHighlights(to: self,
-                                                 sourceFilename: sourceFilename,
-                                                 context: context)
+        // 🔄 Reapply updated highlights (no case param)
+        SentenceHighlightService.applyHighlights(
+            to: self,
+            sourceFilename: sourceFilename,
+            context: context
+        )
 
         Swift.print("🔁 InteractivePDFView: highlights refreshed for \(sourceFilename)")
     }

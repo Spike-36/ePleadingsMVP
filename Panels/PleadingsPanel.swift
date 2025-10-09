@@ -2,7 +2,7 @@
 //  PleadingsPanel.swift
 //  ePleadingsMVP
 //
-//  Phase 6.1 Integration — replaces overlay-based PDFViewRepresentable
+//  Phase 6.2 — PDF discovery fix + verified path validation
 //
 
 import SwiftUI
@@ -29,12 +29,17 @@ struct PleadingsPanel: View {
     var body: some View {
         VStack(spacing: 0) {
             if let pdfURL = resolvedPDFURL() {
-                // 🔄 match Split View call signature
-                InteractivePDFViewRepresentable(url: pdfURL, selectedHeading: $selectedHeading)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .onAppear {
-                        print("📄 PleadingsPanel using InteractivePDFView → \(pdfURL.lastPathComponent)")
-                    }
+                // ✅ Match InteractivePDFViewRepresentable signature (no selectedHeading param)
+                InteractivePDFViewRepresentable(
+                    url: pdfURL,
+                    context: viewContext,
+                    caseEntity: caseEntity
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .onAppear {
+                    print("📄 PleadingsPanel using InteractivePDFView → \(pdfURL.lastPathComponent)")
+                }
+
             } else {
                 VStack {
                     Text("No PDF available for this case.")
@@ -54,21 +59,30 @@ struct PleadingsPanel: View {
         let docs = Array(documents)
         guard !docs.isEmpty else { return nil }
 
+        // ✅ 1. Prefer actual PDFs first — and verify the file exists
         if let pdfDoc = docs.first(where: { ($0.filePath ?? "").lowercased().hasSuffix(".pdf") }),
-           let path = pdfDoc.filePath {
+           let path = pdfDoc.filePath,
+           FileManager.default.fileExists(atPath: path) {
+            print("🧭 Found actual PDF at: \(path)")
             return URL(fileURLWithPath: path)
         }
 
+        // ✅ 2. Fallback to a derived PDF path based on DOCX location
         if let docxDoc = docs.first(where: { ($0.filePath ?? "").lowercased().hasSuffix(".docx") }),
            let docxPath = docxDoc.filePath {
             let candidate = URL(fileURLWithPath: docxPath)
                 .deletingPathExtension()
                 .appendingPathExtension("pdf")
             if FileManager.default.fileExists(atPath: candidate.path) {
+                print("🧭 Derived PDF found at: \(candidate.path)")
                 return candidate
+            } else {
+                print("⚠️ Derived PDF not found at: \(candidate.path)")
             }
         }
 
+        // ✅ Fixed: UUID is non-optional, remove `?`
+        print("⚠️ No matching PDF found for case \(caseEntity.id.uuidString)")
         return nil
     }
 }

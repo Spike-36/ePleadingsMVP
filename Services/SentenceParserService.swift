@@ -3,13 +3,7 @@
 //  ePleadingsMVP
 //
 //  Created by Peter Milligan on 09/10/2025.
-//  Updated 09/10/2025 — Stage 5: Parser De-duplication Pass
-//
-//  Purpose:
-//  Extract real sentences from DOCX paragraphs,
-//  attach them to both the DocumentEntity and (when applicable) the current HeadingEntity.
-//  Assign a document-wide continuous orderIndex.
-//  Skip heading lines, junk, and duplicates.
+//  Updated 09/10/2025 — Stage 5: Parser De-duplication Pass + Import Idempotency
 //
 
 import Foundation
@@ -34,13 +28,17 @@ final class SentenceParserService {
             return
         }
 
-        // 0️⃣ Clean slate
+        // 🧠 Idempotency check — skip if already parsed
         do {
             let fetch: NSFetchRequest<SentenceEntity> = SentenceEntity.fetchRequest()
             fetch.predicate = NSPredicate(format: "document == %@", document)
-            for old in try context.fetch(fetch) { context.delete(old) }
+            let existingCount = try context.count(for: fetch)
+            if existingCount > 0 {
+                print("⚠️ [\(tag)] Skipping sentence re-import — \(existingCount) sentence(s) already exist for \(document.filename ?? "?")")
+                return
+            }
         } catch {
-            print("⚠️ [\(tag)] Failed to purge old sentences: \(error)")
+            print("⚠️ [\(tag)] Failed to check existing sentences: \(error)")
         }
 
         // 1️⃣ Parse paragraphs
@@ -62,8 +60,6 @@ final class SentenceParserService {
         var globalOrder: Int32 = 0
         var createdCount = 0
         var skippedDuplicates = 0
-
-        // 🔍 Deduplication set
         var seenSentences = Set<String>()
 
         // 3️⃣ Iterate through paragraphs
@@ -111,7 +107,6 @@ final class SentenceParserService {
                             continue
                         }
 
-                        // 🔒 Deduplication check
                         let normalized = clean.lowercased()
                         if seenSentences.contains(normalized) {
                             skippedDuplicates += 1

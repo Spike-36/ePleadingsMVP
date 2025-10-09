@@ -15,17 +15,14 @@ final class ImportService: ObservableObject {
     @Published var importedFiles: [CaseFile] = []
     
     func importFile(into caseEntity: CaseEntity) -> DocumentEntity? {
-        let callID = UUID().uuidString.prefix(6)  // short unique tag for tracing
+        let callID = UUID().uuidString.prefix(6)
         print("🟢 importFile() called [\(callID)] for case: \(caseEntity.filename ?? "Unknown Case")")
         
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
-        panel.allowedContentTypes = [
-            .pdf,
-            UTType(filenameExtension: "docx")!
-        ]
+        panel.allowedContentTypes = [.pdf, UTType(filenameExtension: "docx")!]
         
         guard panel.runModal() == .OK, let pickedURL = panel.url else {
             print("🔴 [\(callID)] Import cancelled or no file selected")
@@ -54,29 +51,46 @@ final class ImportService: ObservableObject {
             let copiedURL = try FileHelper.copyFile(from: pickedURL, toCaseID: caseEntity.id)
             
             let document = DocumentEntity(context: context)
-            
-            // 🔄 Required fields
             document.id = UUID()
             document.createdAt = Date()
             document.filename = pickedURL.lastPathComponent
             document.filePath = copiedURL.path
-            document.caseEntity = caseEntity   // ✅ critical: link back to the case
+            document.caseEntity = caseEntity   // initial link
             
-            // 👉 Diagnostic: confirm linkage before parsing
+            // 🩹 Defensive repair for cross-context mismatch
+            if document.caseEntity == nil {
+                document.caseEntity = context.object(with: caseEntity.objectID) as? CaseEntity
+                print("🩹 [\(callID)] Repaired missing caseEntity link (initial assignment).")
+            }
+            
             let caseName = caseEntity.filename ?? "Unnamed Case"
-            print("🧭 [\(callID)] Document \(document.filename ?? "?") correctly linked to case '\(caseName)'")
+            print("🧭 [\(callID)] Document \(document.filename ?? "?") linked to case '\(caseName)'")
             
-            // 👉 Handle DOCX or PDF
+            // Handle DOCX vs PDF
             if copiedURL.pathExtension.lowercased() == "docx" {
-                // 🧩 Parse headings for DOCX
                 let parserService = DocxParserService()
                 do {
                     try parserService.extractHeadings(for: document, in: context, callID: String(callID))
                 } catch {
                     print("⚠️ [\(callID)] Failed to parse headings for \(document.filename ?? "?"): \(error)")
                 }
+
+                let sentenceService = SentenceParserService()
+                do {
+                    try sentenceService.extractSentences(for: document, in: context, callID: String(callID))
+                } catch {
+                    print("⚠️ [\(callID)] Failed to parse sentences for \(document.filename ?? "?"): \(error)")
+                }
+
+                // 🩹 Ensure linkage persisted
+                if document.caseEntity == nil {
+                    document.caseEntity = context.object(with: caseEntity.objectID) as? CaseEntity
+                    print("🩹 [\(callID)] Repaired missing caseEntity link after DOCX parsing.")
+                }
+                try context.save()
+                
             } else {
-                // 🧩 Fallback dummy heading for PDFs
+                // --- PDF path ---
                 let heading = HeadingEntity(context: context)
                 heading.id = UUID()
                 heading.text = "Imported: \(document.filename ?? "Unknown")"
@@ -86,32 +100,26 @@ final class ImportService: ObservableObject {
                 heading.document = document
                 try context.save()
                 
-                // 👉 Defensive check: ensure linkage before mapping
                 if document.caseEntity == nil {
-                    document.caseEntity = caseEntity
-                    print("🩹 [\(callID)] Repaired missing caseEntity link before mapping sentences.")
+                    document.caseEntity = context.object(with: caseEntity.objectID) as? CaseEntity
+                    print("🩹 [\(callID)] Repaired missing caseEntity link before sentence mapping.")
                 }
                 
-                // 👉 Immediately map sentence bounding boxes (PDF only)
                 let mapper = SentenceMapperService()
                 mapper.mapSentences(in: document, using: context)
                 
-                // 👉 Post-mapping diagnostic
                 if document.caseEntity == nil {
-                    print("⚠️ [\(callID)] Document \(document.filename ?? "?") missing caseEntity link before sentence mapping.")
+                    print("⚠️ [\(callID)] Document \(document.filename ?? "?") still missing caseEntity link.")
                 } else {
                     print("🧭 [\(callID)] Sentences will map to case: \(document.caseEntity?.filename ?? "Unknown Case")")
                 }
                 
-                // 👉 Verify sentence count for this document
                 let fetch: NSFetchRequest<SentenceEntity> = SentenceEntity.fetchRequest()
                 fetch.predicate = NSPredicate(format: "document == %@", document)
                 if let sentences = try? context.fetch(fetch) {
-                    let caseName = document.caseEntity?.filename ?? "Unknown"
-                    print("🧩 [\(callID)] \(sentences.count) sentences now indirectly linked to case '\(caseName)'")
+                    print("🧩 [\(callID)] \(sentences.count) sentences now linked to case '\(document.caseEntity?.filename ?? "Unknown")'")
                 }
                 
-                // 👉 Tag all sentences created for this document as "new"
                 let updateRequest = NSBatchUpdateRequest(entityName: "SentenceEntity")
                 updateRequest.predicate = NSPredicate(format: "document == %@", document)
                 updateRequest.propertiesToUpdate = ["state": "new"]
@@ -119,13 +127,11 @@ final class ImportService: ObservableObject {
                 if let result = try? context.execute(updateRequest) as? NSBatchUpdateResult {
                     print("🟢 [\(callID)] Tagged \(result.result ?? 0) sentences as 'new' for \(document.filename ?? "?")")
                 }
-                
                 try context.save()
             }
             
             print("✅ [\(callID)] Imported \(document.filename ?? "?") into case: \(caseEntity.filename ?? "Unknown Case")")
 
-            // 👉 Post-import sanity check
             #if DEBUG
             print("🧩 [\(callID)] Running orphan document check after import...")
             PersistenceController.shared.debugCheckForOrphanDocuments()

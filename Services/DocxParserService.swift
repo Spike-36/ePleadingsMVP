@@ -3,6 +3,7 @@
 //  ePleadingsMVP
 //
 //  Created by Pete on 03/10/2025.
+//  Updated 09/10/2025 — Stage 5: Parser De-duplication Pass
 //
 
 import Foundation
@@ -22,7 +23,7 @@ final class DocxParserService {
                           userInfo: [NSLocalizedDescriptionKey: "Document has no filePath"])
         }
         let url = URL(fileURLWithPath: path)
-        let tag = callID ?? "∅" // fallback
+        let tag = callID ?? "∅"
         
         guard url.pathExtension.lowercased() == "docx" else {
             print("⚠️ [\(tag)] Not a DOCX: \(url.lastPathComponent)")
@@ -44,20 +45,40 @@ final class DocxParserService {
             for h in old { context.delete(h) }
         }
         
-        // 3. Create new HeadingEntity rows
+        // 3. Create new HeadingEntity rows (deduplication guard)
+        var seenHeadings = Set<String>()
+        var savedCount = 0
+        var skippedCount = 0
+        
         for parsed in parsedHeadings {
+            let normalized = parsed.text
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+            
+            guard !normalized.isEmpty else { continue }
+            
+            if seenHeadings.contains(normalized) {
+                skippedCount += 1
+                print("⚙️ [\(tag)] Skipped duplicate heading: '\(parsed.text)'")
+                continue
+            }
+            
+            seenHeadings.insert(normalized)
+            
             let heading = HeadingEntity(context: context)
             heading.id = UUID()
-            heading.text = parsed.text                   // ✅ Actual heading text
-            heading.orderIndex = Int32(parsed.orderIndex) // ✅ Canonical order
+            heading.text = parsed.text
+            heading.orderIndex = Int32(savedCount)
             heading.level = 1
             heading.sourceFilename = document.filename
             heading.document = document
+            
+            savedCount += 1
         }
         
         // 4. Save
         try context.save()
-        print("✅ [\(tag)] Saved \(parsedHeadings.count) headings into Core Data for \(document.filename ?? "?")")
+        print("✅ [\(tag)] Saved \(savedCount) unique heading(s) (\(skippedCount) duplicate(s) skipped) for \(document.filename ?? "?")")
     }
 }
 

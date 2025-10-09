@@ -3,11 +3,13 @@
 //  ePleadingsMVP
 //
 //  Created by Peter Milligan on 09/10/2025.
+//  Updated 09/10/2025 — Stage 5: Parser De-duplication Pass
 //
 //  Purpose:
 //  Extract real sentences from DOCX paragraphs,
 //  attach them to both the DocumentEntity and (when applicable) the current HeadingEntity.
-//  Assign a document-wide continuous orderIndex. Skip heading lines & junk.
+//  Assign a document-wide continuous orderIndex.
+//  Skip heading lines, junk, and duplicates.
 //
 
 import Foundation
@@ -59,10 +61,13 @@ final class SentenceParserService {
         var currentHeading: HeadingEntity?
         var globalOrder: Int32 = 0
         var createdCount = 0
+        var skippedDuplicates = 0
 
-        // 3️⃣ Iterate through paragraphs (split multi-line blocks)
+        // 🔍 Deduplication set
+        var seenSentences = Set<String>()
+
+        // 3️⃣ Iterate through paragraphs
         for para in paragraphs {
-            // Split any multi-line paragraphs (common in DOCX exports)
             let lines = para.components(separatedBy: .newlines)
                 .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                 .filter { !$0.isEmpty }
@@ -70,7 +75,7 @@ final class SentenceParserService {
             for line in lines {
                 let lower = line.lowercased()
 
-                // --- Detect heading-like lines (regex catches “Statement 2”, “Ans 1:”, etc.)
+                // Skip heading-like lines
                 if lower.range(of: #"^(statement|answer|cond|admit)[\s\d:\-]*$"#,
                                options: .regularExpression) != nil {
                     if let label = HeadingClassifier.extractLabel(line),
@@ -85,7 +90,6 @@ final class SentenceParserService {
                     continue
                 }
 
-                // --- Safety net classification
                 switch HeadingClassifier.classify(line) {
                 case .statement, .answer:
                     if let label = HeadingClassifier.extractLabel(line),
@@ -96,10 +100,9 @@ final class SentenceParserService {
                     } else {
                         currentHeading = nil
                     }
-                    continue // never create sentences for heading lines
+                    continue
 
                 case .misc:
-                    // --- Split into real sentences
                     let parts = Self.splitIntoSentences(line)
                     for raw in parts {
                         let clean = raw.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -107,6 +110,15 @@ final class SentenceParserService {
                             print("🧹 [\(tag)] Skipping trivial fragment: '\(clean)'")
                             continue
                         }
+
+                        // 🔒 Deduplication check
+                        let normalized = clean.lowercased()
+                        if seenSentences.contains(normalized) {
+                            skippedDuplicates += 1
+                            print("⚙️ [\(tag)] Skipped duplicate sentence: '\(clean)'")
+                            continue
+                        }
+                        seenSentences.insert(normalized)
 
                         let s = SentenceEntity(context: context)
                         s.id = UUID()
@@ -131,7 +143,7 @@ final class SentenceParserService {
         }
 
         try context.save()
-        print("✅ [\(tag)] SentenceParserService: Created \(createdCount) clean sentence(s) for \(document.filename ?? "?"), orderIndex 0...\(max(0, Int(globalOrder) - 1)).")
+        print("✅ [\(tag)] SentenceParserService: Created \(createdCount) unique sentence(s) (\(skippedDuplicates) duplicate(s) skipped) for \(document.filename ?? "?"), orderIndex 0...\(max(0, Int(globalOrder) - 1)).")
     }
 
     // MARK: - Validation helper

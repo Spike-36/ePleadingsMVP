@@ -2,11 +2,7 @@
 //  InteractivePDFView.swift
 //  ePleadingsMVP
 //
-//  Updated: 10/10/2025 — PDF coordinate alignment + diagnostic logging (corrected for PDFKit API)
-//  ✅ Uses PDFView coordinate conversion correctly (no PDFPage.convert)
-//  ✅ Converts click location into PDF-space
-//  ✅ Prefixed all print statements with Swift.print
-//  ✅ Added rect containment diagnostic
+//  Updated: 10/10/2025 — Debounced refresh + correct PDFKit coords
 //
 
 import PDFKit
@@ -19,25 +15,20 @@ final class InteractivePDFView: PDFView {
     var managedObjectContext: NSManagedObjectContext?
 
     private var lastClickedSentence: SentenceEntity?
+    private var isRefreshingHighlights = false   // 🔒 debounce guard
 
     // MARK: - Mouse Handling
 
-    override func menu(for event: NSEvent) -> NSMenu? {
-        return nil
-    }
+    override func menu(for event: NSEvent) -> NSMenu? { nil }
 
     override func mouseDown(with event: NSEvent) {
         if event.modifierFlags.contains(.control) {
-            self.rightMouseDown(with: event)
+            rightMouseDown(with: event)
             return
         }
-
         guard let page = self.page(for: event.locationInWindow, nearest: true) else { return }
-
-        // ✅ Correct coordinate conversion using PDFView only
         let pointInView = self.convert(event.locationInWindow, from: nil)
         let pdfPoint = self.convert(pointInView, to: page)
-
         let pageNumber = page.label.flatMap { Int($0) } ?? 0
         Swift.print("🖱️ Left click on page \(pageNumber) at \(pdfPoint)")
         onLeftClick?(pageNumber, pdfPoint)
@@ -45,11 +36,8 @@ final class InteractivePDFView: PDFView {
 
     override func rightMouseDown(with event: NSEvent) {
         guard let page = self.page(for: event.locationInWindow, nearest: true) else { return }
-
-        // ✅ Correct coordinate conversion using PDFView only
         let pointInView = self.convert(event.locationInWindow, from: nil)
         let pdfPoint = self.convert(pointInView, to: page)
-
         let pageNumber = page.label.flatMap { Int($0) } ?? 0
         Swift.print("🖱️ Right click on page \(pageNumber) at \(pdfPoint)")
         onRightClick?(pageNumber, pdfPoint)
@@ -89,7 +77,7 @@ final class InteractivePDFView: PDFView {
             try context.save()
             Swift.print("✅ Marked “\(s.text ?? "(unknown)")” as \(newState)")
             if let document = s.document {
-                self.refreshHighlights(for: document, context: context)
+                refreshHighlights(for: document, context: context)
             } else {
                 Swift.print("⚠️ No DocumentEntity linked to sentence.")
             }
@@ -98,7 +86,8 @@ final class InteractivePDFView: PDFView {
         }
     }
 
-    // MARK: - Diagnostic nearest-sentence finder
+    // MARK: - Nearest sentence finder
+
     private func findNearestSentence(pageNumber: Int, point: CGPoint) -> SentenceEntity? {
         guard let context = managedObjectContext else { return nil }
         let request: NSFetchRequest<SentenceEntity> = SentenceEntity.fetchRequest()
@@ -121,21 +110,13 @@ final class InteractivePDFView: PDFView {
                 let dist = sqrt(dx*dx + dy*dy)
                 Swift.print("📍 Distance from click → “\(s.text.prefix(20))…” = \(dist.rounded())")
                 if dist < bestDist {
-                    best = s
-                    bestDist = dist
+                    best = s; bestDist = dist
                 }
             }
 
             if let best = best {
                 Swift.print("🏁 Nearest sentence selected: “\(best.text.prefix(40))…” (dist=\(bestDist.rounded()))")
-
-                // 🧩 Check click containment within mapped rect
-                let rect = CGRect(
-                    x: best.mappedX,
-                    y: best.mappedY,
-                    width: best.mappedWidth,
-                    height: best.mappedHeight
-                )
+                let rect = CGRect(x: best.mappedX, y: best.mappedY, width: best.mappedWidth, height: best.mappedHeight)
                 let inside = rect.contains(point)
                 Swift.print("🧩 Click position relative to rect: \(inside ? "✅ inside" : "❌ outside") — click=\(point), rect=\(rect.debugDescription)")
             }
@@ -147,39 +128,34 @@ final class InteractivePDFView: PDFView {
         }
     }
 
-    func scrollTo(page: PDFPage, rect: CGRect) {
-        self.go(to: rect, on: page)
-    }
-}
+    // MARK: - Highlight Refresh (debounced)
 
-// MARK: - Live Highlight Refresh (object-based)
-extension InteractivePDFView {
-
-    /// Removes all existing highlights and reapplies updated ones from Core Data.
     func refreshHighlights(for document: DocumentEntity,
                            context: NSManagedObjectContext) {
-        guard let pdfDocument = self.document else {
+        guard !isRefreshingHighlights else {
+            Swift.print("⏳ refreshHighlights ignored (debounced)")
+            return
+        }
+        guard self.document != nil else {
             Swift.print("⚠️ refreshHighlights: No PDF document loaded.")
             return
         }
 
-        // 🧹 Remove all existing highlight annotations
-        for i in 0..<pdfDocument.pageCount {
-            guard let page = pdfDocument.page(at: i) else { continue }
-            let oldHighlights = page.annotations.filter {
-                $0.type == PDFAnnotationSubtype.highlight.rawValue
-            }
-            oldHighlights.forEach { page.removeAnnotation($0) }
+        isRefreshingHighlights = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            SentenceHighlightService.applyHighlights(
+                to: self,
+                for: document,
+                context: context
+            )
+            self.isRefreshingHighlights = false
+            Swift.print("🔁 InteractivePDFView: highlights refreshed for \(document.filename ?? "(unknown)")")
         }
+    }
 
-        // 🔄 Reapply updated highlights via SentenceHighlightService
-        SentenceHighlightService.applyHighlights(
-            to: self,
-            for: document,
-            context: context
-        )
-
-        Swift.print("🔁 InteractivePDFView: highlights refreshed for \(document.filename ?? "(unknown)")")
+    func scrollTo(page: PDFPage, rect: CGRect) {
+        self.go(to: rect, on: page)
     }
 }
 

@@ -6,6 +6,7 @@
 //  Updated 10/10/2025 — fixed Core Data context reference (self.context)
 //  ✅ Uses self.context.fetch(fetch) instead of SwiftUI context
 //  ✅ Calls object-based highlight predicate
+//  ✅ Added async defer to ensure highlights render after PDF fully loads
 //
 
 import SwiftUI
@@ -41,11 +42,14 @@ struct InteractivePDFViewRepresentable: NSViewRepresentable {
 
             // ✅ FIX: Use self.context (Core Data), not the SwiftUI `context`
             if let doc = try? self.context.fetch(fetch).first {
-                SentenceHighlightService.applyHighlights(
-                    to: pdfView,
-                    for: doc,
-                    context: self.context
-                )
+                // 👉 Defer slightly to allow PDFKit to finish layout before highlighting
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    SentenceHighlightService.applyHighlights(
+                        to: pdfView,
+                        for: doc,
+                        context: self.context
+                    )
+                }
             } else {
                 Swift.print("⚠️ No DocumentEntity found for \(filename)")
             }

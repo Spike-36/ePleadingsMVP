@@ -2,11 +2,11 @@
 //  InteractivePDFView.swift
 //  ePleadingsMVP
 //
-//  Created by Peter Milligan on 07/10/2025.
-//  Updated 10/10/2025 — fully object-based highlight refresh
-//  ✅ Replaced filename-based refresh with DocumentEntity reference
-//  ✅ Consistent Core Data predicate use (document == %@)
-//  ✅ Disabled PDFKit’s default context menu
+//  Updated: 10/10/2025 — PDF coordinate alignment + diagnostic logging (corrected for PDFKit API)
+//  ✅ Uses PDFView coordinate conversion correctly (no PDFPage.convert)
+//  ✅ Converts click location into PDF-space
+//  ✅ Prefixed all print statements with Swift.print
+//  ✅ Added rect containment diagnostic
 //
 
 import PDFKit
@@ -16,47 +16,52 @@ import CoreData
 final class InteractivePDFView: PDFView {
     var onRightClick: ((Int, CGPoint) -> Void)?
     var onLeftClick: ((Int, CGPoint) -> Void)?
-
-    // 👉 Injected Core Data context (set by Representable on creation)
     var managedObjectContext: NSManagedObjectContext?
 
-    // Keep track of the last clicked sentence
     private var lastClickedSentence: SentenceEntity?
 
     // MARK: - Mouse Handling
 
     override func menu(for event: NSEvent) -> NSMenu? {
-        // 🧩 Returning nil suppresses PDFKit’s built-in menu entirely
         return nil
     }
 
     override func mouseDown(with event: NSEvent) {
-        // Treat Control + Left Click as Right Click
         if event.modifierFlags.contains(.control) {
-            self.rightMouseDown(with: event)   // 🔄 synthesize right-click
+            self.rightMouseDown(with: event)
             return
         }
 
         guard let page = self.page(for: event.locationInWindow, nearest: true) else { return }
-        let point = self.convert(event.locationInWindow, to: page)
+
+        // ✅ Correct coordinate conversion using PDFView only
+        let pointInView = self.convert(event.locationInWindow, from: nil)
+        let pdfPoint = self.convert(pointInView, to: page)
+
         let pageNumber = page.label.flatMap { Int($0) } ?? 0
-        onLeftClick?(pageNumber, point)
+        Swift.print("🖱️ Left click on page \(pageNumber) at \(pdfPoint)")
+        onLeftClick?(pageNumber, pdfPoint)
     }
 
     override func rightMouseDown(with event: NSEvent) {
         guard let page = self.page(for: event.locationInWindow, nearest: true) else { return }
-        let point = self.convert(event.locationInWindow, to: page)
-        let pageNumber = page.label.flatMap { Int($0) } ?? 0
-        onRightClick?(pageNumber, point)
 
-        if let s = findNearestSentence(pageNumber: pageNumber, point: point) {
+        // ✅ Correct coordinate conversion using PDFView only
+        let pointInView = self.convert(event.locationInWindow, from: nil)
+        let pdfPoint = self.convert(pointInView, to: page)
+
+        let pageNumber = page.label.flatMap { Int($0) } ?? 0
+        Swift.print("🖱️ Right click on page \(pageNumber) at \(pdfPoint)")
+        onRightClick?(pageNumber, pdfPoint)
+
+        if let s = findNearestSentence(pageNumber: pageNumber, point: pdfPoint) {
             lastClickedSentence = s
+            Swift.print("🎯 Matched to sentence: '\(s.text.prefix(50))…'  rect=(\(s.mappedX.rounded()), \(s.mappedY.rounded()), \(s.mappedWidth.rounded()), \(s.mappedHeight.rounded()))")
         } else {
             Swift.print("⚠️ No nearby sentence found.")
             return
         }
 
-        // 👉 Build custom context menu
         let menu = NSMenu(title: "Tag Sentence")
         menu.addItem(withTitle: "Admitted", action: #selector(markAdmitted), keyEquivalent: "")
         menu.addItem(withTitle: "Denied", action: #selector(markDenied), keyEquivalent: "")
@@ -83,20 +88,17 @@ final class InteractivePDFView: PDFView {
         do {
             try context.save()
             Swift.print("✅ Marked “\(s.text ?? "(unknown)")” as \(newState)")
-
-            // ✅ NEW — trigger highlight refresh using linked DocumentEntity
             if let document = s.document {
                 self.refreshHighlights(for: document, context: context)
             } else {
                 Swift.print("⚠️ No DocumentEntity linked to sentence.")
             }
-
         } catch {
             Swift.print("❌ Failed to save state: \(error)")
         }
     }
 
-    // MARK: - Simple nearest-sentence finder (replace with SentenceLookupService later)
+    // MARK: - Diagnostic nearest-sentence finder
     private func findNearestSentence(pageNumber: Int, point: CGPoint) -> SentenceEntity? {
         guard let context = managedObjectContext else { return nil }
         let request: NSFetchRequest<SentenceEntity> = SentenceEntity.fetchRequest()
@@ -104,7 +106,10 @@ final class InteractivePDFView: PDFView {
 
         do {
             let candidates = try context.fetch(request)
-            guard !candidates.isEmpty else { return nil }
+            guard !candidates.isEmpty else {
+                Swift.print("⚠️ No sentence candidates found for page \(pageNumber)")
+                return nil
+            }
 
             var best: SentenceEntity?
             var bestDist = CGFloat.greatestFiniteMagnitude
@@ -114,11 +119,27 @@ final class InteractivePDFView: PDFView {
                 let dx = point.x - cx
                 let dy = point.y - cy
                 let dist = sqrt(dx*dx + dy*dy)
+                Swift.print("📍 Distance from click → “\(s.text.prefix(20))…” = \(dist.rounded())")
                 if dist < bestDist {
                     best = s
                     bestDist = dist
                 }
             }
+
+            if let best = best {
+                Swift.print("🏁 Nearest sentence selected: “\(best.text.prefix(40))…” (dist=\(bestDist.rounded()))")
+
+                // 🧩 Check click containment within mapped rect
+                let rect = CGRect(
+                    x: best.mappedX,
+                    y: best.mappedY,
+                    width: best.mappedWidth,
+                    height: best.mappedHeight
+                )
+                let inside = rect.contains(point)
+                Swift.print("🧩 Click position relative to rect: \(inside ? "✅ inside" : "❌ outside") — click=\(point), rect=\(rect.debugDescription)")
+            }
+
             return best
         } catch {
             Swift.print("⚠️ Lookup failed: \(error)")

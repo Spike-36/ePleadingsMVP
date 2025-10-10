@@ -2,10 +2,9 @@
 //  SentenceMapperService.swift
 //  ePleadingsMVP
 //
-//  Updated: 09/10/2025 —
-//  • Fixed predicate to match by base filename (docx/pdf alignment)
-//  • Ensures mapped sentences are linked to the PDF document for highlighting.
-//  • Added guards to skip fragments / headings (Stage 4 filter pass).
+//  Updated: 10/10/2025 — Diagnostic logging added
+//  • Logs every mapped rect’s coordinates for each sentence
+//  • Prints PDF page coordinate ranges for quick sanity checks
 //
 
 import Foundation
@@ -43,11 +42,14 @@ final class SentenceMapperService {
             guard let page = pdfDoc.page(at: pageIndex),
                   let pageText = page.string, !pageText.isEmpty else { continue }
 
+            let pageBounds = page.bounds(for: .mediaBox)
+            print("📏 Page \(pageIndex + 1) bounds: \(pageBounds)")
+
             for sentence in existingSentences {
                 let text = sentence.text.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !text.isEmpty else { continue }
 
-                // 🧩 Stage 4: skip fragments or heading lines
+                // 🧩 Skip headings and fragments
                 guard text.count > 4 else {
                     print("⚙️ Skipped too-short text: '\(text)'")
                     continue
@@ -76,7 +78,11 @@ final class SentenceMapperService {
 
                         sentence.document = document
                         mappedCount += 1
-                        print("✅ Updated mapping for page \(pageIndex + 1): \(text.prefix(40))…")
+
+                        // 🧾 Diagnostic printout
+                        for (i, r) in rects.enumerated() {
+                            print("🧩 [Page \(pageIndex + 1)] '\(text.prefix(30))…' rect[\(i)]: x=\(r.origin.x.rounded()), y=\(r.origin.y.rounded()), w=\(r.width.rounded()), h=\(r.height.rounded())")
+                        }
                     }
                 }
             }
